@@ -1,55 +1,328 @@
-import { TbMenu2, TbSearch, TbMoon, TbSun, TbBell } from "react-icons/tb";
-import Avatar from "../ui/Avatar";
-import { useTheme } from "../../context/ThemeContext";
+// import { useState } from "react";
+// import {
+//   TbMenu2,
+//   TbChevronDown,
+//   TbBriefcase,
+//   TbUserSearch,
+//   TbClockHour4,
+//   TbBookmark,
+//   TbBriefcase2,
+//   TbUsers,
+//   TbFolderPlus,
+//   TbFolders,
+//   TbArchive,
+// } from "react-icons/tb";
+// import { useNavigate } from "react-router-dom";
+
+// // ---------------------------------------------------------------------------
+// // Dropdown data — 3 options each for Search, Jobs, Folders
+// // ---------------------------------------------------------------------------
+// const NAV_MENUS = {
+//   search: {
+//     label: "Search",
+//     items: [
+//       {
+//         label: "Search Candidates",
+//         icon: TbUserSearch,
+//         path: "/search/candidates",
+//       },
+//       { label: "Recent Searches", icon: TbClockHour4, path: "/search/recent" },
+//       { label: "Saved Searches", icon: TbBookmark, path: "/search/saved" },
+//     ],
+//   },
+//   jobs: {
+//     label: "Jobs",
+//     items: [
+//       { label: "Post a Job", icon: TbBriefcase2, path: "/jobs/create" },
+//       { label: "My Jobs", icon: TbBriefcase, path: "/jobs" },
+//       { label: "View Applications", icon: TbUsers, path: "/jobs/applications" },
+//     ],
+//   },
+//   folders: {
+//     label: "Folders",
+//     items: [
+//       { label: "All Folders", icon: TbFolders, path: "/folders" },
+//       { label: "Create Folder", icon: TbFolderPlus, path: "/folders/create" },
+//       { label: "Archived", icon: TbArchive, path: "/folders/archived" },
+//     ],
+//   },
+// };
+
+// // ---------------------------------------------------------------------------
+// // Reusable hover dropdown nav item
+// // ---------------------------------------------------------------------------
+// const NavDropdown = ({ menuKey, onNavigate }) => {
+//   const menu = NAV_MENUS[menuKey];
+
+//   return (
+//     <div className="relative group">
+//       <button
+//         type="button"
+//         className="flex items-center gap-1 px-4 py-2 text-[14.5px] font-medium rounded-lg text-black hover:bg-[#f2f2f2] transition-colors duration-200"
+//       >
+//         {menu.label}
+//         <TbChevronDown
+//           size={14}
+//           className="transition-transform duration-200 group-hover:rotate-180"
+//         />
+//       </button>
+
+//       {/* Invisible bridge so hover doesn't drop between button and menu */}
+//       <div className="absolute left-0 top-full h-2 w-full" />
+
+//       <div
+//         className="absolute left-0 top-full pt-2 w-56 opacity-0 invisible translate-y-1
+//                    group-hover:opacity-100 group-hover:visible group-hover:translate-y-0
+//                    transition-all duration-200 ease-out z-40"
+//       >
+//         <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden py-1.5">
+//           {menu.items.map((item) => (
+//             <button
+//               key={item.path}
+//               onClick={() => onNavigate(item.path)}
+//               className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13.5px] text-black hover:bg-[#f2f2f2] transition-colors duration-200 text-left"
+//             >
+//               <item.icon size={16} className="shrink-0 text-black" />
+//               {item.label}
+//             </button>
+//           ))}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// // ---------------------------------------------------------------------------
+// // Header
+// // ---------------------------------------------------------------------------
+// export default function Header({ onMenuClick }) {
+//   const navigate = useNavigate();
+//   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+//   const handleNavigate = (path) => {
+//     navigate(path);
+//     setMobileNavOpen(false);
+//   };
+
+//   return (
+//     <header className="sticky top-0 z-30 bg-[#F4F5FA] dark:bg-[#F4F5FA] shadow-sm">
+//       <div className="h-[68px] flex items-center gap-2 px-4 sm:px-6">
+//         {/* Mobile hamburger (sidebar toggle) */}
+//         <button
+//           onClick={onMenuClick}
+//           className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800/60 shrink-0"
+//           aria-label="Toggle menu"
+//         >
+//           <TbMenu2 size={22} />
+//         </button>
+
+//         {/* Desktop nav links — Search, Jobs, Folders */}
+//         <nav className="hidden lg:flex items-center gap-1">
+//           <NavDropdown menuKey="search" onNavigate={handleNavigate} />
+//           <NavDropdown menuKey="jobs" onNavigate={handleNavigate} />
+//           <NavDropdown menuKey="folders" onNavigate={handleNavigate} />
+//         </nav>
+
+//         {/* Mobile nav toggle */}
+//         <button
+//           onClick={() => setMobileNavOpen((v) => !v)}
+//           className="lg:hidden ml-auto flex items-center gap-1 px-3 py-2 text-[14px] font-medium rounded-lg text-black hover:bg-[#f2f2f2] transition-colors"
+//         >
+//           Menu
+//           <TbChevronDown
+//             size={16}
+//             className={`transition-transform duration-200 ${mobileNavOpen ? "rotate-180" : ""}`}
+//           />
+//         </button>
+//       </div>
+
+//       {/* Mobile nav panel */}
+//       {mobileNavOpen && (
+//         <div className="lg:hidden border-t border-gray-200/70 dark:border-gray-800 bg-[#F4F5FA] dark:bg-gray-900 px-4 py-3 space-y-3">
+//           {Object.entries(NAV_MENUS).map(([key, menu]) => (
+//             <div key={key}>
+//               <p className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+//                 {menu.label}
+//               </p>
+//               {menu.items.map((item) => (
+//                 <button
+//                   key={item.path}
+//                   onClick={() => handleNavigate(item.path)}
+//                   className="w-full flex items-center gap-2.5 px-2 py-2 text-[13.5px] text-black hover:bg-[#f2f2f2] transition-colors duration-200 text-left rounded-lg"
+//                 >
+//                   <item.icon size={16} className="shrink-0 text-black" />
+//                   {item.label}
+//                 </button>
+//               ))}
+//             </div>
+//           ))}
+//         </div>
+//       )}
+//     </header>
+//   );
+// }
+
+
+import { useState } from "react";
+import {
+  TbMenu2,
+  TbChevronDown,
+  TbBriefcase,
+  TbUserSearch,
+  TbClockHour4,
+  TbBookmark,
+  TbBriefcase2,
+  TbUsers,
+  TbFolderPlus,
+  TbFolders,
+  TbArchive,
+} from "react-icons/tb";
 import { useNavigate } from "react-router-dom";
 
-export default function Header({ onMenuClick, onBellClick }) {
-  const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
+// ---------------------------------------------------------------------------
+// Dropdown data — 3 options each for Search, Jobs, Folders
+// ---------------------------------------------------------------------------
+const NAV_MENUS = {
+  search: {
+    label: "Search",
+    items: [
+      {
+        label: "Search Candidates",
+        icon: TbUserSearch,
+        path: "/search/candidates",
+      },
+      { label: "Recent Searches", icon: TbClockHour4, path: "/search/recent" },
+      { label: "Saved Searches", icon: TbBookmark, path: "/search/saved" },
+    ],
+  },
+  jobs: {
+    label: "Jobs",
+    items: [
+      { label: "Post a Job", icon: TbBriefcase2, path: "/jobs/create" },
+      { label: "My Jobs", icon: TbBriefcase, path: "/jobs" },
+      { label: "View Applications", icon: TbUsers, path: "/jobs/applications" },
+    ],
+  },
+  folders: {
+    label: "Folders",
+    items: [
+      { label: "All Folders", icon: TbFolders, path: "/folders" },
+      { label: "Create Folder", icon: TbFolderPlus, path: "/folders/create" },
+      { label: "Archived", icon: TbArchive, path: "/folders/archived" },
+    ],
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Reusable hover dropdown nav item
+// ---------------------------------------------------------------------------
+const NavDropdown = ({ menuKey, onNavigate }) => {
+  const menu = NAV_MENUS[menuKey];
 
   return (
-    <header className="sticky top-0 lg:pl-0 h-[68px] flex items-center gap-3 px-4 sm:px-6 z-30 bg-[#F8F7FA]/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
+    <div className="relative group">
       <button
-        onClick={onMenuClick}
-        className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-800/60"
-        aria-label="Toggle menu"
+        type="button"
+        className="flex items-center gap-1 px-4 py-2 text-[14.5px] font-medium rounded-lg text-black hover:bg-[#f2f2f2] transition-colors duration-200"
       >
-        <TbMenu2 size={22} />
+        {menu.label}
+        <TbChevronDown
+          size={14}
+          className="transition-transform duration-200 group-hover:rotate-180"
+        />
       </button>
 
-      <div className="relative flex-1 ml-6 max-w-xs hidden sm:block">
-        <TbSearch
-          size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-        />
-        <input
-          type="text"
-          placeholder="Search jobs, candidates, companies…"
-          className="w-full pl-9 pr-3 py-2 text-[13px] bg-white dark:bg-gray-800 border border-transparent rounded-full outline-none focus:border-brand-300 transition-colors shadow-card dark:shadow-gray-800/30"
-        />
-      </div>
+      {/* Invisible bridge so hover doesn't drop between button and menu */}
+      <div className="absolute left-0 top-full h-2 w-full" />
 
-      <div className="ml-auto flex items-center gap-1 sm:gap-3">
-        {/* <button
-          onClick={toggleTheme}
-          className="w-9 h-9 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-800/60"
-          title="Toggle theme"
-        >
-          {theme === "light" ? <TbMoon size={19} /> : <TbSun size={19} />}
-        </button> */}
-        <button
-          onClick={onBellClick}
-          className="relative w-9 h-9 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-800/60"
-          title="Notifications"
-        >
-          <TbBell size={19} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger-500 rounded-full" />
-        </button>
-        <div className="relative ml-1" onClick={() => navigate("/profile")}>
-          <Avatar initials="AD" size="sm" className="cursor-pointer" />
-          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-success-500 rounded-full border-2 border-[#F8F7FA] dark:border-gray-900" />
+      <div
+        className="absolute left-0 top-full pt-2 w-56 opacity-0 invisible translate-y-1
+                   group-hover:opacity-100 group-hover:visible group-hover:translate-y-0
+                   transition-all duration-200 ease-out z-40"
+      >
+        <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden py-1.5">
+          {menu.items.map((item) => (
+            <button
+              key={item.path}
+              onClick={() => onNavigate(item.path)}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13.5px] text-black hover:bg-[#f2f2f2] transition-colors duration-200 text-left"
+            >
+              <item.icon size={16} className="shrink-0 text-black" />
+              {item.label}
+            </button>
+          ))}
         </div>
       </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
+export default function Header({ onMenuClick }) {
+  const navigate = useNavigate();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const handleNavigate = (path) => {
+    navigate(path);
+    setMobileNavOpen(false);
+  };
+
+  return (
+    <header className="sticky top-0 z-30 bg-[#F4F5FA] dark:bg-[#F4F5FA] shadow-sm">
+      <div className="h-[68px] flex items-center gap-2 px-4 sm:px-6">
+        {/* Mobile hamburger (sidebar toggle) */}
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800/60 shrink-0"
+          aria-label="Toggle menu"
+        >
+          <TbMenu2 size={22} />
+        </button>
+
+        {/* Desktop nav links — Search, Jobs, Folders */}
+        <nav className="hidden lg:flex items-center gap-1">
+          <NavDropdown menuKey="search" onNavigate={handleNavigate} />
+          <NavDropdown menuKey="jobs" onNavigate={handleNavigate} />
+          <NavDropdown menuKey="folders" onNavigate={handleNavigate} />
+        </nav>
+
+        {/* Mobile nav toggle */}
+        <button
+          onClick={() => setMobileNavOpen((v) => !v)}
+          className="lg:hidden ml-auto flex items-center gap-1 px-3 py-2 text-[14px] font-medium rounded-lg text-black hover:bg-[#f2f2f2] transition-colors"
+        >
+          Menu
+          <TbChevronDown
+            size={16}
+            className={`transition-transform duration-200 ${mobileNavOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+      </div>
+
+      {/* Mobile nav panel — now matches desktop dropdown styling */}
+      {mobileNavOpen && (
+        <div className="lg:hidden bg-white border-t border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700 px-4 py-3 space-y-3">
+          {Object.entries(NAV_MENUS).map(([key, menu]) => (
+            <div key={key}>
+              <p className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                {menu.label}
+              </p>
+              {menu.items.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => handleNavigate(item.path)}
+                  className="w-full flex items-center gap-2.5 px-2 py-2 text-[13.5px] text-black hover:bg-[#f2f2f2] dark:text-white dark:hover:bg-gray-700 transition-colors duration-200 text-left rounded-lg"
+                >
+                  <item.icon size={16} className="shrink-0 text-black dark:text-white" />
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </header>
   );
 }

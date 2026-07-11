@@ -38,7 +38,7 @@ export default function DashboardLayout() {
   const [notifOpen, setNotifOpen] = useState(false)
  
   return (
-    <div className="min-h-screen bg-[#F8F7FA] bg-white">
+    <div className="min-h-screen bg-[#F4F5FA] bg-white">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
  
       <div className="lg:ml-72 xl:ml-80 transition-[margin] duration-300 ease-in-out">
