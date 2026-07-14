@@ -5,22 +5,22 @@ import {
 } from 'react-icons/tb'
 
 export const NAV_ITEMS = [
-  { section: 'Main' },
+  // { section: 'Main' },
   { id: 'dashboard', label: 'Dashboard', icon: TbLayoutDashboard, path: '/' },
   { id: 'jobs', label: 'Job Listings', icon: TbBriefcase, path: '/jobs' },
   { id: 'job-post', label: 'Post Job', icon: TbBriefcase, path: '/job-post' },
   // { id: 'jobs', label: 'Job Listings', icon: TbBriefcase, path: '/jobs', badge: '12' },
-  
-  { id: 'candidates', label: 'Candidates', icon: TbUsers, path: '/candidates' },
-  { id: 'companies', label: 'Companies', icon: TbBuilding, path: '/companies' },
-  { section: 'Recruitment' },
-  { id: 'applications', label: 'Applications', icon: TbFileText, path: '/applications', badge: '5', badgeRed: true },
-  { id: 'interviews', label: 'Interviews', icon: TbCalendarEvent, path: '/interviews' },
-  { id: 'messages', label: 'Messages', icon: TbMessageCircle, path: '/messages', badge: '3' },
-  { section: 'Settings' },
-  { id: 'settings', label: 'Settings', icon: TbSettings, path: '/settings' },
-  { id: 'reports', label: 'Reports', icon: TbChartBar, path: '/reports' },
-  { section: 'Account' },
+
+  // { id: 'candidates', label: 'Candidates', icon: TbUsers, path: '/candidates' },
+  // { id: 'companies', label: 'Companies', icon: TbBuilding, path: '/companies' },
+  // { section: 'Recruitment' },
+  // { id: 'applications', label: 'Applications', icon: TbFileText, path: '/applications', badge: '5', badgeRed: true },
+  // { id: 'interviews', label: 'Interviews', icon: TbCalendarEvent, path: '/interviews' },
+  // { id: 'messages', label: 'Messages', icon: TbMessageCircle, path: '/messages', badge: '3' },
+  // { section: 'Settings' },
+  // { id: 'settings', label: 'Settings', icon: TbSettings, path: '/settings' },
+  // { id: 'reports', label: 'Reports', icon: TbChartBar, path: '/reports' },
+  // { section: 'Account' },
   { id: 'profile', label: 'Profile', icon: TbUser, path: '/profile' },
 ]
 
