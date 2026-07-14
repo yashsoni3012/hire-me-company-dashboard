@@ -348,12 +348,12 @@
 //     </>
 //   );
 // }
-
 import { NavLink, useNavigate } from "react-router-dom";
 import { TbBriefcase, TbDotsVertical, TbLogout } from "react-icons/tb";
 import { NAV_ITEMS } from "../../data/staticData";
 import Avatar from "../ui/Avatar";
 import { useAuth } from "../../context/AuthContext";
+import logoImg from '../../../public/logo.png'
 
 export default function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth();
@@ -403,13 +403,17 @@ export default function Sidebar({ open, onClose }) {
           ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0
           shadow-sm lg:shadow-none`}
       >
+        {/* Logo area – icon + logo image */}
         <div className="h-[72px] flex items-center gap-3 px-7 flex-shrink-0">
-          <div className="w-9 h-9 rounded-lg bg-brand-500 flex items-center justify-center text-white shadow-[0_3px_10px_rgba(140,87,255,0.35)]">
+          {/* <div className="w-9 h-9 rounded-lg bg-brand-500 flex items-center justify-center text-white shadow-[0_3px_10px_rgba(140,87,255,0.35)]">
             <TbBriefcase size={20} />
-          </div>
-          <span className="text-xl font-bold text-black tracking-wide">
-            HIRE<span className="text-brand-500">ME</span>
-          </span>
+          </div> */}
+          {/* Replace text with logo image from public folder */}
+          <img
+            src={logoImg} // <-- adjust filename if needed (e.g., /logo.svg, /logo.webp)
+            alt="HIRE ME"
+            className="h-14 w-auto object-contain"
+          />
         </div>
 
         <nav className="flex-1 overflow-y-auto scrollbar-thin py-3 px-4">
@@ -428,11 +432,11 @@ export default function Sidebar({ open, onClose }) {
                 onClick={onClose}
                 className={({ isActive }) =>
                   `flex items-center gap-3 mx-1 my-0.5 px-4 py-3 rounded-full text-[14.5px] font-medium transition-all duration-200
-  ${
-    isActive
-      ? "bg-gradient-to-r from-brand-500 to-brand-400 text-white shadow-[0_3px_8px_rgba(140,87,255,0.45)]"
-      : "text-black hover:bg-[#f2f2f2]"
-  }`
+                  ${
+                    isActive
+                      ? "bg-gradient-to-r from-brand-500 to-brand-400 text-white shadow-[0_3px_8px_rgba(140,87,255,0.45)]"
+                      : "text-black hover:bg-[#f2f2f2]"
+                  }`
                 }
               >
                 <item.icon size={20} className="flex-shrink-0" />

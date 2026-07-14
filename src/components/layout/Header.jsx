@@ -1,3 +1,4 @@
+
 // import { useState } from "react";
 // import {
 //   TbMenu2,
@@ -11,6 +12,7 @@
 //   TbFolderPlus,
 //   TbFolders,
 //   TbArchive,
+//   TbSearch,
 // } from "react-icons/tb";
 // import { useNavigate } from "react-router-dom";
 
@@ -98,6 +100,7 @@
 // export default function Header({ onMenuClick }) {
 //   const navigate = useNavigate();
 //   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+//   const [searchTerm, setSearchTerm] = useState("");
 
 //   const handleNavigate = (path) => {
 //     navigate(path);
@@ -123,10 +126,36 @@
 //           <NavDropdown menuKey="folders" onNavigate={handleNavigate} />
 //         </nav>
 
+//         {/* Right side search bar (rounded pill) */}
+//         <div className="ml-auto flex items-center">
+//           <div className="relative hidden sm:block">
+//             <TbSearch
+//               size={17}
+//               className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+//             />
+//             <input
+//               type="text"
+//               value={searchTerm}
+//               onChange={(e) => setSearchTerm(e.target.value)}
+//               placeholder="Search jobs, candidates, companies…"
+//               className="w-56 md:w-72 pl-10 pr-4 py-2.5 text-[13.5px] text-black bg-white border border-gray-200 rounded-full outline-none focus:border-gray-300 focus:ring-2 focus:ring-gray-100 placeholder:text-gray-400 transition-all duration-200"
+//             />
+//           </div>
+
+//           {/* Mobile search icon button */}
+//           <button
+//             type="button"
+//             className="sm:hidden w-9 h-9 flex items-center justify-center rounded-full text-gray-600 hover:bg-white transition-colors"
+//             aria-label="Search"
+//           >
+//             <TbSearch size={19} />
+//           </button>
+//         </div>
+
 //         {/* Mobile nav toggle */}
 //         <button
 //           onClick={() => setMobileNavOpen((v) => !v)}
-//           className="lg:hidden ml-auto flex items-center gap-1 px-3 py-2 text-[14px] font-medium rounded-lg text-black hover:bg-[#f2f2f2] transition-colors"
+//           className="lg:hidden flex items-center gap-1 px-3 py-2 text-[14px] font-medium rounded-lg text-black hover:bg-[#f2f2f2] transition-colors"
 //         >
 //           Menu
 //           <TbChevronDown
@@ -136,9 +165,9 @@
 //         </button>
 //       </div>
 
-//       {/* Mobile nav panel */}
+//       {/* Mobile nav panel — now matches desktop dropdown styling */}
 //       {mobileNavOpen && (
-//         <div className="lg:hidden border-t border-gray-200/70 dark:border-gray-800 bg-[#F4F5FA] dark:bg-gray-900 px-4 py-3 space-y-3">
+//         <div className="lg:hidden bg-white border-t border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700 px-4 py-3 space-y-3">
 //           {Object.entries(NAV_MENUS).map(([key, menu]) => (
 //             <div key={key}>
 //               <p className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -148,9 +177,9 @@
 //                 <button
 //                   key={item.path}
 //                   onClick={() => handleNavigate(item.path)}
-//                   className="w-full flex items-center gap-2.5 px-2 py-2 text-[13.5px] text-black hover:bg-[#f2f2f2] transition-colors duration-200 text-left rounded-lg"
+//                   className="w-full flex items-center gap-2.5 px-2 py-2 text-[13.5px] text-black hover:bg-[#f2f2f2] dark:text-white dark:hover:bg-gray-700 transition-colors duration-200 text-left rounded-lg"
 //                 >
-//                   <item.icon size={16} className="shrink-0 text-black" />
+//                   <item.icon size={16} className="shrink-0 text-black dark:text-white" />
 //                   {item.label}
 //                 </button>
 //               ))}
@@ -161,7 +190,6 @@
 //     </header>
 //   );
 // }
-
 
 import { useState } from "react";
 import {
@@ -176,6 +204,7 @@ import {
   TbFolderPlus,
   TbFolders,
   TbArchive,
+  TbSearch,
 } from "react-icons/tb";
 import { useNavigate } from "react-router-dom";
 
@@ -214,7 +243,7 @@ const NAV_MENUS = {
 };
 
 // ---------------------------------------------------------------------------
-// Reusable hover dropdown nav item
+// Reusable hover dropdown nav item (desktop)
 // ---------------------------------------------------------------------------
 const NavDropdown = ({ menuKey, onNavigate }) => {
   const menu = NAV_MENUS[menuKey];
@@ -228,7 +257,7 @@ const NavDropdown = ({ menuKey, onNavigate }) => {
         {menu.label}
         <TbChevronDown
           size={14}
-          className="transition-transform duration-200 group-hover:rotate-180"
+          className="transition-transform duration-300 group-hover:rotate-180"
         />
       </button>
 
@@ -236,9 +265,10 @@ const NavDropdown = ({ menuKey, onNavigate }) => {
       <div className="absolute left-0 top-full h-2 w-full" />
 
       <div
-        className="absolute left-0 top-full pt-2 w-56 opacity-0 invisible translate-y-1
-                   group-hover:opacity-100 group-hover:visible group-hover:translate-y-0
-                   transition-all duration-200 ease-out z-40"
+        className="absolute left-0 top-full pt-2 w-56 opacity-0 invisible scale-95 -translate-y-1
+                   origin-top
+                   group-hover:opacity-100 group-hover:visible group-hover:scale-100 group-hover:translate-y-0
+                   transition-all duration-250 ease-out z-40"
       >
         <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden py-1.5">
           {menu.items.map((item) => (
@@ -263,6 +293,7 @@ const NavDropdown = ({ menuKey, onNavigate }) => {
 export default function Header({ onMenuClick }) {
   const navigate = useNavigate();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const handleNavigate = (path) => {
     navigate(path);
@@ -288,41 +319,85 @@ export default function Header({ onMenuClick }) {
           <NavDropdown menuKey="folders" onNavigate={handleNavigate} />
         </nav>
 
-        {/* Mobile nav toggle */}
-        <button
-          onClick={() => setMobileNavOpen((v) => !v)}
-          className="lg:hidden ml-auto flex items-center gap-1 px-3 py-2 text-[14px] font-medium rounded-lg text-black hover:bg-[#f2f2f2] transition-colors"
-        >
-          Menu
-          <TbChevronDown
-            size={16}
-            className={`transition-transform duration-200 ${mobileNavOpen ? "rotate-180" : ""}`}
-          />
-        </button>
-      </div>
+        {/* Right side search bar (rounded pill) */}
+        <div className="ml-auto flex items-center">
+          <div className="relative hidden sm:block">
+            <TbSearch
+              size={17}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search jobs, candidates, companies…"
+              className="w-56 md:w-72 pl-10 pr-4 py-2.5 text-[13.5px] text-black bg-white border border-gray-200 rounded-full outline-none focus:border-gray-300 focus:ring-2 focus:ring-gray-100 placeholder:text-gray-400 transition-all duration-200"
+            />
+          </div>
 
-      {/* Mobile nav panel — now matches desktop dropdown styling */}
-      {mobileNavOpen && (
-        <div className="lg:hidden bg-white border-t border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700 px-4 py-3 space-y-3">
-          {Object.entries(NAV_MENUS).map(([key, menu]) => (
-            <div key={key}>
-              <p className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                {menu.label}
-              </p>
-              {menu.items.map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => handleNavigate(item.path)}
-                  className="w-full flex items-center gap-2.5 px-2 py-2 text-[13.5px] text-black hover:bg-[#f2f2f2] dark:text-white dark:hover:bg-gray-700 transition-colors duration-200 text-left rounded-lg"
-                >
-                  <item.icon size={16} className="shrink-0 text-black dark:text-white" />
-                  {item.label}
-                </button>
+          {/* Mobile search icon button */}
+          <button
+            type="button"
+            className="sm:hidden w-9 h-9 flex items-center justify-center rounded-full text-gray-600 hover:bg-white transition-colors"
+            aria-label="Search"
+          >
+            <TbSearch size={19} />
+          </button>
+        </div>
+
+        {/* Mobile nav toggle — opens on hover, with tap fallback for touch */}
+        <div className="relative lg:hidden group">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen((v) => !v)}
+            className="flex items-center gap-1 px-3 py-2 text-[14px] font-medium rounded-lg text-black hover:bg-[#f2f2f2] transition-colors duration-200"
+          >
+            Menu
+            <TbChevronDown
+              size={16}
+              className={`transition-transform duration-300 group-hover:rotate-180 ${
+                mobileNavOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {/* Invisible bridge so hover doesn't drop between button and panel */}
+          <div className="absolute right-0 top-full h-2 w-full" />
+
+          {/* Mobile nav panel — hover-triggered with fade + scale animation, plus tap fallback */}
+          <div
+            className={`absolute right-0 top-full pt-2 w-64 origin-top-right z-40
+              transition-all duration-250 ease-out
+              opacity-0 invisible scale-95 -translate-y-1
+              group-hover:opacity-100 group-hover:visible group-hover:scale-100 group-hover:translate-y-0
+              ${
+                mobileNavOpen
+                  ? "!opacity-100 !visible !scale-100 !translate-y-0"
+                  : ""
+              }`}
+          >
+            <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden py-2 px-1 space-y-1">
+              {Object.entries(NAV_MENUS).map(([key, menu]) => (
+                <div key={key}>
+                  <p className="px-3 pt-1.5 pb-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
+                    {menu.label}
+                  </p>
+                  {menu.items.map((item) => (
+                    <button
+                      key={item.path}
+                      onClick={() => handleNavigate(item.path)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-[13.5px] text-black hover:bg-[#f2f2f2] transition-colors duration-200 text-left rounded-lg"
+                    >
+                      <item.icon size={16} className="shrink-0 text-black" />
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
               ))}
             </div>
-          ))}
+          </div>
         </div>
-      )}
+      </div>
     </header>
   );
 }
