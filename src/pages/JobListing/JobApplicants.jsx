@@ -37,6 +37,7 @@
 //   TbSparkles,
 // } from "react-icons/tb";
 // import { useToast } from "../../context/ToastContext";
+// import { useAuth } from "../../context/AuthContext"; // <-- import AuthContext
 
 // // ---------------------------------------------------------------------------
 // // API Service
@@ -46,18 +47,29 @@
 // const applicantsApiService = {
 //   getApplicantsByJobId: async (jobId) => {
 //     const response = await fetch(
-//       `${API_BASE_URL}/candidate-profile-job-application?job_id=${jobId}`,
+//       `${API_BASE_URL}/candidate-profile-job-application?job_id=${jobId}`
 //     );
 //     if (!response.ok) {
 //       throw new Error(`HTTP error! status: ${response.status}`);
 //     }
 //     return response.json();
 //   },
-
 //   getCandidateFullProfile: async (candidateId) => {
 //     const response = await fetch(
-//       `${API_BASE_URL}/candidate-full-profile/${candidateId}`,
+//       `${API_BASE_URL}/candidate-full-profile/${candidateId}`
 //     );
+//     if (!response.ok) {
+//       throw new Error(`HTTP error! status: ${response.status}`);
+//     }
+//     return response.json();
+//   },
+//   // New: Log resume download
+//   logResumeDownload: async (data) => {
+//     const response = await fetch(`${API_BASE_URL}/resume-download-logs`, {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify(data),
+//     });
 //     if (!response.ok) {
 //       throw new Error(`HTTP error! status: ${response.status}`);
 //     }
@@ -66,7 +78,7 @@
 // };
 
 // // ---------------------------------------------------------------------------
-// // Small helpers
+// // Helpers (same as before)
 // // ---------------------------------------------------------------------------
 // const asName = (val, fallback = "N/A") => {
 //   if (!val) return fallback;
@@ -99,7 +111,6 @@
 //   return combined || "?";
 // };
 
-// // Format "May 2026" style from an ISO date
 // const formatMonthYear = (dateString) => {
 //   if (!dateString) return "";
 //   const date = new Date(dateString);
@@ -107,7 +118,6 @@
 //   return date.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
 // };
 
-// // Turn a start/end date pair into a duration string like "2m" or "1y 3m"
 // const durationFromDates = (start, end) => {
 //   if (!start) return "";
 //   const startDate = new Date(start);
@@ -124,7 +134,6 @@
 //   return `${years}y ${remMonths}m`;
 // };
 
-// // Format a lakh-style salary display, e.g. 450000 -> "4.5 Lac"
 // const formatSalaryLac = (amount) => {
 //   const num = Number(amount);
 //   if (!num || isNaN(num)) return null;
@@ -133,8 +142,6 @@
 //   return `₹ ${formatted} Lac`;
 // };
 
-// // Was this application submitted within the last N days? Used for the
-// // "Newly added" badge, similar to the reference screenshot.
 // const isRecentlyApplied = (dateString, days = 3) => {
 //   if (!dateString) return false;
 //   const date = new Date(dateString);
@@ -144,7 +151,7 @@
 // };
 
 // // ---------------------------------------------------------------------------
-// // Reusable bits
+// // Reusable bits (same)
 // // ---------------------------------------------------------------------------
 // const StatusBadge = ({ status }) => {
 //   const normalized = (status || "").toLowerCase();
@@ -157,9 +164,7 @@
 //   };
 //   const cls = colors[normalized] || "bg-gray-50 text-gray-700 border-gray-200";
 //   return (
-//     <span
-//       className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${cls}`}
-//     >
+//     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${cls}`}>
 //       {status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unknown"}
 //     </span>
 //   );
@@ -184,8 +189,6 @@
 //   <p className="text-sm text-gray-400 italic">No {label} added yet</p>
 // );
 
-// // Highlights any word from `terms` inside `text` — used to mimic the
-// // highlighted "Cyber Security" style keywords in the reference design.
 // const HighlightedText = ({ text, terms = [] }) => {
 //   if (!text) return null;
 //   if (!terms.length) return <>{text}</>;
@@ -200,14 +203,12 @@
 //           </mark>
 //         ) : (
 //           <React.Fragment key={i}>{part}</React.Fragment>
-//         ),
+//         )
 //       )}
 //     </>
 //   );
 // };
 
-// // A single tag/chip used for skills, highlighting the ones matched
-// // against the job's own required skills (if provided).
 // const SkillChip = ({ label, highlighted }) => (
 //   <span
 //     className={`text-sm ${
@@ -221,15 +222,17 @@
 // );
 
 // // ---------------------------------------------------------------------------
-// // Candidate Card (full-width, ATS-style) – now clickable to open profile
+// // Candidate Card (with Resume button in top-right corner)
 // // ---------------------------------------------------------------------------
 // const CandidateCard = ({
 //   applicant,
-//   onOpen,
+//   onCardClick,
 //   onToggleFavourite,
 //   jobSkillTerms,
+//   onOpenResume,
 // }) => {
 //   const [favourite, setFavourite] = useState(!!applicant.is_favourite);
+//   const [resumeLoading, setResumeLoading] = useState(false);
 
 //   const handleFavourite = (e) => {
 //     e.stopPropagation();
@@ -237,7 +240,17 @@
 //     onToggleFavourite && onToggleFavourite(applicant);
 //   };
 
-//   // Prevent modal open when clicking interactive elements
+//   const handleResumeClick = async (e) => {
+//     e.stopPropagation();
+//     if (!applicant.candidate_id) {
+//       // showError is not available here, handled in parent
+//       return;
+//     }
+//     setResumeLoading(true);
+//     await onOpenResume(applicant.candidate_id);
+//     setResumeLoading(false);
+//   };
+
 //   const stopPropagation = (e) => e.stopPropagation();
 
 //   const skillNames = applicant.skills || [];
@@ -246,7 +259,7 @@
 
 //   return (
 //     <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-purple-200 transition-all w-full overflow-hidden">
-//       {/* Top meta bar – not clickable */}
+//       {/* Top meta bar – now includes Resume button on the right */}
 //       <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5 bg-gray-50 border-b border-gray-100 text-xs text-gray-500">
 //         <div className="flex items-center gap-4">
 //           <span className="flex items-center gap-1">
@@ -257,25 +270,38 @@
 //             Stage: <StatusBadge status={applicant.status} />
 //           </span>
 //         </div>
-//         <div className="flex items-center gap-3 text-gray-400">
+//         <div className="flex items-center gap-3">
 //           {applicant.updated_at && (
 //             <span>Updated: {formatDate(applicant.updated_at)}</span>
 //           )}
+//           {/* --- Resume Button --- */}
+//           <button
+//             onClick={handleResumeClick}
+//             disabled={resumeLoading}
+//             className="flex items-center gap-1 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg px-2.5 py-1 hover:bg-purple-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+//           >
+//             {resumeLoading ? (
+//               <span className="inline-block w-3 h-3 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+//             ) : (
+//               <TbFileText size={14} />
+//             )}
+//             {resumeLoading ? "Loading..." : "Resume"}
+//           </button>
 //         </div>
 //       </div>
 
-//       {/* Main body – clickable to open profile */}
+//       {/* Main body – clickable to navigate to details */}
 //       <div
 //         className="flex flex-col lg:flex-row gap-5 p-5 cursor-pointer"
-//         onClick={() => onOpen(applicant)}
+//         onClick={() => onCardClick(applicant)}
 //       >
 //         {/* Left: candidate details */}
 //         <div className="flex-1 min-w-0 flex gap-4">
 //           <div
 //             className="shrink-0 w-14 h-14 rounded-full bg-purple-100 text-purple-700 font-semibold text-lg flex items-center justify-center overflow-hidden"
 //             onClick={(e) => {
-//               e.stopPropagation(); // prevent double trigger
-//               onOpen(applicant);
+//               e.stopPropagation();
+//               onCardClick(applicant);
 //             }}
 //           >
 //             {applicant.profile_photo ? (
@@ -296,7 +322,7 @@
 //                 type="button"
 //                 onClick={(e) => {
 //                   e.stopPropagation();
-//                   onOpen(applicant);
+//                   onCardClick(applicant);
 //                 }}
 //                 className="text-base font-semibold text-gray-900 hover:text-purple-700 hover:underline"
 //               >
@@ -369,7 +395,7 @@
 //                     <SkillChip
 //                       label={skill}
 //                       highlighted={jobSkillTerms?.some(
-//                         (t) => t.toLowerCase() === skill.toLowerCase(),
+//                         (t) => t.toLowerCase() === skill.toLowerCase()
 //                       )}
 //                     />
 //                     {i < visibleSkills.length - 1 && ", "}
@@ -379,7 +405,7 @@
 //                   <button
 //                     onClick={(e) => {
 //                       e.stopPropagation();
-//                       onOpen(applicant);
+//                       onCardClick(applicant);
 //                     }}
 //                     className="ml-1 text-purple-600 font-medium hover:underline"
 //                   >
@@ -412,7 +438,7 @@
 //               </div>
 //             )}
 
-//             {/* Bottom actions – these should NOT trigger modal */}
+//             {/* Bottom actions – stop propagation */}
 //             <div
 //               className="mt-3 flex items-center gap-4 text-xs text-gray-500"
 //               onClick={stopPropagation}
@@ -429,32 +455,16 @@
 //                   favourite ? "text-red-500" : ""
 //                 }`}
 //               >
-//                 {favourite ? (
-//                   <TbHeartFilled size={14} />
-//                 ) : (
-//                   <TbHeart size={14} />
-//                 )}
+//                 {favourite ? <TbHeartFilled size={14} /> : <TbHeart size={14} />}
 //                 Favourite
 //               </button>
 //             </div>
 //           </div>
 //         </div>
 
-//         {/* Right: summary + contact panel – clickable except for interactive elements */}
+//         {/* Right panel – same as before */}
 //         <div className="w-full lg:w-72 shrink-0 lg:border-l lg:border-gray-100 lg:pl-5 flex flex-col gap-3">
-//           {/* Resume & LinkedIn buttons – stop propagation */}
 //           <div className="flex items-center gap-2" onClick={stopPropagation}>
-//             {applicant.resume_url && (
-//               <a
-//                 href={applicant.resume_url}
-//                 target="_blank"
-//                 rel="noopener noreferrer"
-//                 onClick={(e) => e.stopPropagation()}
-//                 className="flex items-center gap-1 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50"
-//               >
-//                 <TbFileText size={14} /> Resume
-//               </a>
-//             )}
 //             {applicant.linkedin_url && (
 //               <a
 //                 href={applicant.linkedin_url}
@@ -470,19 +480,14 @@
 
 //           {applicant.summary && (
 //             <div>
-//               <p className="text-xs font-semibold text-gray-500 mb-1">
-//                 Summary:
-//               </p>
+//               <p className="text-xs font-semibold text-gray-500 mb-1">Summary:</p>
 //               <p className="text-xs text-gray-600 leading-relaxed line-clamp-4">
-//                 <HighlightedText
-//                   text={applicant.summary}
-//                   terms={jobSkillTerms}
-//                 />
+//                 <HighlightedText text={applicant.summary} terms={jobSkillTerms} />
 //               </p>
 //               <button
 //                 onClick={(e) => {
 //                   e.stopPropagation();
-//                   onOpen(applicant);
+//                   onCardClick(applicant);
 //                 }}
 //                 className="text-xs text-purple-600 font-medium hover:underline mt-1"
 //               >
@@ -491,10 +496,7 @@
 //             </div>
 //           )}
 
-//           <div
-//             className="mt-auto pt-2 border-t border-gray-100 space-y-2"
-//             onClick={stopPropagation}
-//           >
+//           <div className="mt-auto pt-2 border-t border-gray-100 space-y-2" onClick={stopPropagation}>
 //             {applicant.mobile && (
 //               <div className="flex items-center justify-between">
 //                 <span className="flex items-center gap-1.5 text-sm text-gray-700">
@@ -533,451 +535,13 @@
 // };
 
 // // ---------------------------------------------------------------------------
-// // Full Profile Modal
-// // ---------------------------------------------------------------------------
-// const ProfileModal = ({ profile, loading, error, onClose }) => {
-//   useEffect(() => {
-//     const onKeyDown = (e) => e.key === "Escape" && onClose();
-//     document.addEventListener("keydown", onKeyDown);
-//     document.body.style.overflow = "hidden";
-//     return () => {
-//       document.removeEventListener("keydown", onKeyDown);
-//       document.body.style.overflow = "";
-//     };
-//   }, [onClose]);
-
-//   const candidate = profile?.candidate;
-//   const completion = profile?.total_completion_percentage ?? 0;
-//   const skills = asList(profile?.candidate_skills);
-//   const education = asList(profile?.candidate_education);
-//   const experience = asList(profile?.candidate_experience);
-//   const preferences = profile?.candidate_preferences;
-//   const certifications = asList(profile?.candidate_certification);
-//   const awards = asList(profile?.candidate_awards);
-//   const socialLinks = asList(profile?.candidate_social_links);
-//   const projects = asList(profile?.candidate_projects);
-
-//   return (
-//     <div
-//       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
-//       onClick={onClose}
-//     >
-//       <div
-//         className="bg-gray-50 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl"
-//         onClick={(e) => e.stopPropagation()}
-//       >
-//         {/* Header */}
-//         <div className="sticky top-0 bg-white border-b border-gray-200 rounded-t-2xl px-6 py-4 flex items-center justify-between z-10">
-//           <h2 className="text-lg font-bold text-gray-900">Candidate Profile</h2>
-//           <button
-//             onClick={onClose}
-//             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-//             aria-label="Close"
-//           >
-//             <TbX size={20} />
-//           </button>
-//         </div>
-
-//         <div className="p-6 space-y-5">
-//           {loading && (
-//             <div className="text-center py-16">
-//               <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-purple-600 border-t-transparent"></div>
-//               <p className="mt-2 text-gray-500 text-sm">Loading profile...</p>
-//             </div>
-//           )}
-
-//           {!loading && error && (
-//             <div className="text-center py-16">
-//               <p className="text-red-500 font-medium">Failed to load profile</p>
-//               <p className="text-sm text-gray-400 mt-1">{error}</p>
-//             </div>
-//           )}
-
-//           {!loading && !error && candidate && (
-//             <>
-//               {/* Basic info */}
-//               <div className="bg-white rounded-xl border border-gray-200 p-5">
-//                 <div className="flex items-center gap-4">
-//                   <div className="shrink-0 w-16 h-16 rounded-full bg-purple-100 text-purple-700 font-bold text-xl flex items-center justify-center overflow-hidden">
-//                     {candidate.profile_photo ? (
-//                       <img
-//                         src={candidate.profile_photo}
-//                         alt={`${candidate.first_name} ${candidate.last_name}`}
-//                         className="w-full h-full object-cover"
-//                       />
-//                     ) : (
-//                       initials(candidate.first_name, candidate.last_name)
-//                     )}
-//                   </div>
-//                   <div className="flex-1 min-w-0">
-//                     <div className="flex items-center gap-2 flex-wrap">
-//                       <h3 className="text-lg font-semibold text-gray-900">
-//                         {candidate.first_name} {candidate.last_name}
-//                       </h3>
-//                       <StatusBadge status={candidate.status} />
-//                     </div>
-//                     <div className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
-//                       <TbMail size={14} />
-//                       {candidate.email}
-//                     </div>
-//                     {candidate.mobile && (
-//                       <div className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
-//                         <TbPhone size={14} />
-//                         {candidate.mobile}
-//                       </div>
-//                     )}
-//                   </div>
-//                 </div>
-
-//                 {/* Profile completion */}
-//                 <div className="mt-4">
-//                   <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-//                     <span>Profile completion</span>
-//                     <span className="font-medium text-gray-700">
-//                       {completion}%
-//                     </span>
-//                   </div>
-//                   <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-//                     <div
-//                       className="h-full bg-purple-600 rounded-full transition-all"
-//                       style={{
-//                         width: `${Math.min(100, Math.max(0, completion))}%`,
-//                       }}
-//                     />
-//                   </div>
-//                 </div>
-
-//                 <div className="mt-3 text-xs text-gray-400">
-//                   Last login: {formatDate(candidate.last_login_at, true)}
-//                 </div>
-//               </div>
-
-//               {/* Skills */}
-//               <SectionCard
-//                 icon={TbCircleCheck}
-//                 title="Skills"
-//                 count={skills.length}
-//               >
-//                 {skills.length === 0 ? (
-//                   <EmptyRow label="skills" />
-//                 ) : (
-//                   <div className="flex flex-wrap gap-2">
-//                     {skills.map((skill) => {
-//                       const skillId = skill.id || skill.skill_id;
-//                       return (
-//                         <span
-//                           key={skillId || Math.random()}
-//                           className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-100"
-//                         >
-//                           {asName(skill.skill, `Skill #${skill.skill_id}`)}
-//                           {skill.experience_months
-//                             ? ` · ${skill.experience_months} mo`
-//                             : ""}
-//                         </span>
-//                       );
-//                     })}
-//                   </div>
-//                 )}
-//               </SectionCard>
-
-//               {/* Education */}
-//               <SectionCard
-//                 icon={TbSchool}
-//                 title="Education"
-//                 count={education.length}
-//               >
-//                 {education.length === 0 ? (
-//                   <EmptyRow label="education" />
-//                 ) : (
-//                   <div className="space-y-3">
-//                     {education.map((edu) => (
-//                       <div
-//                         key={edu.id}
-//                         className="border border-gray-100 rounded-lg p-3"
-//                       >
-//                         <div className="flex items-center justify-between gap-2">
-//                           <p className="font-medium text-gray-900 text-sm">
-//                             {edu.college_name || "N/A"}
-//                           </p>
-//                           <span className="text-xs text-gray-400">
-//                             {edu.passing_year}
-//                           </span>
-//                         </div>
-//                         <p className="text-xs text-gray-500 mt-0.5">
-//                           {asName(edu.education_category_id)} ·{" "}
-//                           {asName(edu.education_sub_category_id)}
-//                         </p>
-//                         <p className="text-xs text-gray-500">
-//                           {edu.education_type || "N/A"} ·{" "}
-//                           {edu.percentage || "N/A"}%
-//                         </p>
-//                       </div>
-//                     ))}
-//                   </div>
-//                 )}
-//               </SectionCard>
-
-//               {/* Experience */}
-//               <SectionCard
-//                 icon={TbBriefcase}
-//                 title="Experience"
-//                 count={experience.length}
-//               >
-//                 {experience.length === 0 ? (
-//                   <EmptyRow label="experience" />
-//                 ) : (
-//                   <div className="space-y-3">
-//                     {experience.map((exp) => (
-//                       <div
-//                         key={exp.id}
-//                         className="border border-gray-100 rounded-lg p-3"
-//                       >
-//                         <div className="flex items-center justify-between gap-2 flex-wrap">
-//                           <p className="font-medium text-gray-900 text-sm">
-//                             {exp.job_title || "N/A"}{" "}
-//                             {exp.designation ? `· ${exp.designation}` : ""}
-//                           </p>
-//                           {exp.is_current_company && (
-//                             <span className="text-xs px-2 py-0.5 bg-green-50 text-green-700 rounded-full border border-green-200">
-//                               Current
-//                             </span>
-//                           )}
-//                         </div>
-//                         <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
-//                           <TbBuildingSkyscraper size={13} />
-//                           {exp.company_name || "N/A"}
-//                         </div>
-//                         <p className="text-xs text-gray-500 mt-0.5">
-//                           {formatDate(exp.start_date)} —{" "}
-//                           {exp.is_current_company
-//                             ? "Present"
-//                             : formatDate(exp.end_date)}
-//                         </p>
-//                         <p className="text-xs text-gray-500 mt-0.5">
-//                           {asName(exp.industry_id)} · {asName(exp.workplace_id)}{" "}
-//                           · {asName(exp.job_types_id)}
-//                         </p>
-//                         {exp.salary && (
-//                           <p className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-//                             <TbCurrencyRupee size={13} />
-//                             {Number(exp.salary).toLocaleString("en-IN")}
-//                           </p>
-//                         )}
-//                         {exp.job_description && (
-//                           <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-//                             {exp.job_description}
-//                           </p>
-//                         )}
-//                       </div>
-//                     ))}
-//                   </div>
-//                 )}
-//               </SectionCard>
-
-//               {/* Preferences */}
-//               <SectionCard icon={TbMapPin} title="Preferences">
-//                 {!preferences ? (
-//                   <EmptyRow label="preferences" />
-//                 ) : (
-//                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-//                     <div>
-//                       <p className="text-xs text-gray-400 mb-1">
-//                         Preferred industry
-//                       </p>
-//                       <p className="text-gray-700">
-//                         {asList(preferences.preferred_industry_id)
-//                           .map((i) => asName(i))
-//                           .join(", ") || "N/A"}
-//                       </p>
-//                     </div>
-//                     <div>
-//                       <p className="text-xs text-gray-400 mb-1">
-//                         Preferred city
-//                       </p>
-//                       <p className="text-gray-700">
-//                         {asList(preferences.preferred_city_id)
-//                           .map((i) => asName(i))
-//                           .join(", ") || "N/A"}
-//                       </p>
-//                     </div>
-//                     <div>
-//                       <p className="text-xs text-gray-400 mb-1">
-//                         Workplace type
-//                       </p>
-//                       <p className="text-gray-700">
-//                         {asList(preferences.preferred_workplace_type_id)
-//                           .map((i) => asName(i))
-//                           .join(", ") || "N/A"}
-//                       </p>
-//                     </div>
-//                     <div>
-//                       <p className="text-xs text-gray-400 mb-1">
-//                         Expected salary
-//                       </p>
-//                       <p className="text-gray-700 flex items-center gap-1">
-//                         <TbCurrencyRupee size={14} />
-//                         {preferences.preferred_salary
-//                           ? Number(preferences.preferred_salary).toLocaleString(
-//                               "en-IN",
-//                             )
-//                           : "N/A"}
-//                       </p>
-//                     </div>
-//                   </div>
-//                 )}
-//               </SectionCard>
-
-//               {/* Certifications */}
-//               <SectionCard
-//                 icon={TbCertificate}
-//                 title="Certifications"
-//                 count={certifications.length}
-//               >
-//                 {certifications.length === 0 ? (
-//                   <EmptyRow label="certifications" />
-//                 ) : (
-//                   <div className="space-y-2">
-//                     {certifications.map((cert) => (
-//                       <div
-//                         key={cert.id}
-//                         className="flex items-center justify-between border border-gray-100 rounded-lg p-3"
-//                       >
-//                         <div>
-//                           <p className="text-sm font-medium text-gray-900">
-//                             {cert.certificate_name}
-//                           </p>
-//                           <p className="text-xs text-gray-500">{cert.issuer}</p>
-//                         </div>
-//                         <span className="text-xs text-gray-400">
-//                           {formatDate(cert.issue_date)}
-//                         </span>
-//                       </div>
-//                     ))}
-//                   </div>
-//                 )}
-//               </SectionCard>
-
-//               {/* Awards */}
-//               <SectionCard icon={TbAward} title="Awards" count={awards.length}>
-//                 {awards.length === 0 ? (
-//                   <EmptyRow label="awards" />
-//                 ) : (
-//                   <div className="space-y-2">
-//                     {awards.map((award) => (
-//                       <div
-//                         key={award.id}
-//                         className="border border-gray-100 rounded-lg p-3"
-//                       >
-//                         <p className="text-sm font-medium text-gray-900">
-//                           {award.title}
-//                         </p>
-//                         {award.description && (
-//                           <p className="text-xs text-gray-500 mt-0.5">
-//                             {award.description}
-//                           </p>
-//                         )}
-//                       </div>
-//                     ))}
-//                   </div>
-//                 )}
-//               </SectionCard>
-
-//               {/* Social links */}
-//               <SectionCard
-//                 icon={TbLink}
-//                 title="Social Links"
-//                 count={socialLinks.length}
-//               >
-//                 {socialLinks.length === 0 ? (
-//                   <EmptyRow label="social links" />
-//                 ) : (
-//                   <div className="flex flex-wrap gap-2">
-//                     {socialLinks.map((link) => (
-//                       <a
-//                         key={link.id}
-//                         href={link.social_url}
-//                         target="_blank"
-//                         rel="noopener noreferrer"
-//                         className="px-3 py-1.5 bg-purple-50 text-purple-700 text-xs font-medium rounded-lg border border-purple-100 hover:bg-purple-100 transition-colors capitalize"
-//                       >
-//                         {link.social_type}
-//                       </a>
-//                     ))}
-//                   </div>
-//                 )}
-//               </SectionCard>
-
-//               {/* Projects */}
-//               <SectionCard
-//                 icon={TbFolder}
-//                 title="Projects"
-//                 count={projects.length}
-//               >
-//                 {projects.length === 0 ? (
-//                   <EmptyRow label="projects" />
-//                 ) : (
-//                   <div className="space-y-3">
-//                     {projects.map((project) => (
-//                       <div
-//                         key={project.id}
-//                         className="border border-gray-100 rounded-lg p-3"
-//                       >
-//                         <div className="flex items-center justify-between gap-2 flex-wrap">
-//                           <p className="text-sm font-medium text-gray-900">
-//                             {project.project_title}
-//                           </p>
-//                           {project.project_url && (
-//                             <a
-//                               href={project.project_url}
-//                               target="_blank"
-//                               rel="noopener noreferrer"
-//                               className="text-xs text-purple-600 hover:underline"
-//                             >
-//                               View project
-//                             </a>
-//                           )}
-//                         </div>
-//                         <p className="text-xs text-gray-500 mt-0.5">
-//                           {project.candidate_role || "N/A"}
-//                           {project.client_name
-//                             ? ` · ${project.client_name}`
-//                             : ""}
-//                         </p>
-//                         {project.technologies_used && (
-//                           <p className="text-xs text-gray-500 mt-0.5">
-//                             {project.technologies_used}
-//                           </p>
-//                         )}
-//                         {project.team_size && (
-//                           <p className="text-xs text-gray-500 mt-0.5">
-//                             Team size: {project.team_size}
-//                           </p>
-//                         )}
-//                         {project.project_description && (
-//                           <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-//                             {project.project_description}
-//                           </p>
-//                         )}
-//                       </div>
-//                     ))}
-//                   </div>
-//                 )}
-//               </SectionCard>
-//             </>
-//           )}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// // ---------------------------------------------------------------------------
-// // Main Component
+// // Main Component (JobApplicants)
 // // ---------------------------------------------------------------------------
 // export default function JobApplicants() {
 //   const { id: jobId } = useParams();
 //   const navigate = useNavigate();
-//   const { showError } = useToast();
+//   const { showError, showSuccess } = useToast();
+//   const { user } = useAuth(); // logged‑in user
 
 //   const [applicants, setApplicants] = useState([]);
 //   const [loading, setLoading] = useState(true);
@@ -985,16 +549,43 @@
 //   const [searchTerm, setSearchTerm] = useState("");
 //   const [filterStatus, setFilterStatus] = useState("all");
 
-//   // Pagination
+//   // Company ID of the logged‑in user's company
+//   const [companyId, setCompanyId] = useState(null);
+//   const [fetchingCompany, setFetchingCompany] = useState(false);
+
 //   const [currentPage, setCurrentPage] = useState(1);
 //   const [itemsPerPage] = useState(6);
 
-//   // Profile modal
-//   const [selectedCandidate, setSelectedCandidate] = useState(null);
-//   const [profile, setProfile] = useState(null);
-//   const [profileLoading, setProfileLoading] = useState(false);
-//   const [profileError, setProfileError] = useState(null);
+//   // ─── Fetch the company ID for the logged‑in user ────────────────
+//   useEffect(() => {
+//     const fetchCompanyId = async () => {
+//       if (!user?.id) return;
+//       setFetchingCompany(true);
+//       try {
+//         // 1. Fetch all companies and find the one where CompanyUser.company_user_id === user.id
+//         const res = await fetch(`${API_BASE_URL}/companies`);
+//         if (!res.ok) throw new Error("Failed to fetch companies");
+//         const data = await res.json();
+//         const companies = data.data || data.results || data || [];
+//         const found = companies.find(
+//           (c) => c.CompanyUser?.company_user_id === user.id
+//         );
+//         if (found) {
+//           setCompanyId(found.id);
+//           console.log("✅ Found company ID:", found.id);
+//         } else {
+//           console.warn("⚠️ No company found for user", user.id);
+//         }
+//       } catch (error) {
+//         console.error("Error fetching company ID:", error);
+//       } finally {
+//         setFetchingCompany(false);
+//       }
+//     };
+//     fetchCompanyId();
+//   }, [user]);
 
+//   // ─── Fetch applicants (existing) ─────────────────────────────────
 //   useEffect(() => {
 //     if (jobId) fetchApplicants();
 //     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1042,19 +633,16 @@
 //         const rawSkills = asList(c.candidate_skills || item.candidate_skills);
 //         const skillNames = rawSkills
 //           .map((s) =>
-//             typeof s === "string" ? s : asName(s.skill, s.skill_name || s.name),
+//             typeof s === "string" ? s : asName(s.skill, s.skill_name || s.name)
 //           )
 //           .filter((s) => s && s !== "N/A");
 
-//         const experienceList = asList(
-//           c.candidate_experience || item.candidate_experience,
-//         );
+//         const experienceList = asList(c.candidate_experience || item.candidate_experience);
 //         const currentExp =
 //           experienceList.find((e) => e.is_current_company) || experienceList[0];
 //         const currentRole = currentExp
 //           ? {
-//               designation:
-//                 currentExp.designation || currentExp.job_title || "N/A",
+//               designation: currentExp.designation || currentExp.job_title || "N/A",
 //               company: currentExp.company_name || "",
 //               duration_label: currentExp.start_date
 //                 ? `${formatMonthYear(currentExp.start_date)} to ${
@@ -1073,19 +661,14 @@
 //             ? durationFromDates(currentExp.start_date, currentExp.end_date)
 //             : "");
 
-//         const preferences =
-//           c.candidate_preferences || item.candidate_preferences;
+//         const preferences = c.candidate_preferences || item.candidate_preferences;
 //         const expectedSalaryLabel = formatSalaryLac(
-//           preferences?.preferred_salary ??
-//             c.expected_salary ??
-//             currentExp?.salary,
+//           preferences?.preferred_salary ?? c.expected_salary ?? currentExp?.salary
 //         );
 //         const noticePeriod =
 //           c.notice_period ||
 //           preferences?.notice_period ||
-//           (c.notice_period_days
-//             ? `${c.notice_period_days} days notice period`
-//             : "");
+//           (c.notice_period_days ? `${c.notice_period_days} days notice period` : "");
 //         const currentLocation =
 //           asName(c.current_city_id, "") ||
 //           asName(c.city, "") ||
@@ -1094,9 +677,7 @@
 //           .map((cty) => asName(cty))
 //           .filter((v) => v && v !== "N/A");
 
-//         const educationList = asList(
-//           c.candidate_education || item.candidate_education,
-//         );
+//         const educationList = asList(c.candidate_education || item.candidate_education);
 //         const latestEdu = educationList[0];
 //         const educationLabel = latestEdu
 //           ? `${asName(latestEdu.education_sub_category_id, latestEdu.education_type || "")}${
@@ -1110,8 +691,7 @@
 //           first_name: c.first_name || "",
 //           last_name: c.last_name || "",
 //           full_name:
-//             `${c.first_name || ""} ${c.last_name || ""}`.trim() ||
-//             "Unnamed candidate",
+//             `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Unnamed candidate",
 //           email: c.email || "N/A",
 //           mobile: c.mobile || "",
 //           mobile_verified: !!(c.mobile_verified || c.is_mobile_verified),
@@ -1120,7 +700,7 @@
 //           applied_at: item.applied_at || item.created_at || item.createdAt,
 //           updated_at: item.updated_at || item.updatedAt,
 //           is_newly_added: isRecentlyApplied(
-//             item.applied_at || item.created_at || item.createdAt,
+//             item.applied_at || item.created_at || item.createdAt
 //           ),
 //           is_favourite: !!item.is_favourite,
 //           skills: skillNames,
@@ -1136,7 +716,7 @@
 //           linkedin_url:
 //             c.linkedin_url ||
 //             asList(c.candidate_social_links).find(
-//               (l) => (l.social_type || "").toLowerCase() === "linkedin",
+//               (l) => (l.social_type || "").toLowerCase() === "linkedin"
 //             )?.social_url ||
 //             "",
 //         };
@@ -1152,52 +732,88 @@
 //     }
 //   };
 
-//   const handleOpenProfile = async (applicant) => {
-//     setSelectedCandidate(applicant);
-//     setProfile(null);
-//     setProfileError(null);
-
-//     if (
-//       applicant.candidate_id === undefined ||
-//       applicant.candidate_id === null
-//     ) {
-//       console.error(
-//         "Missing candidate_id for applicant:",
-//         applicant,
-//         "— check the shape of the /jobs/:jobId/applications response and adjust the transform in fetchApplicants.",
-//       );
-//       setProfileError("This applicant record is missing a candidate id.");
-//       showError("Could not identify this candidate");
-//       return;
+//   // ─── Navigate to applicant details ──────────────────────────────
+//   const handleCardClick = (applicant) => {
+//     if (applicant.candidate_id) {
+//       navigate(`/jobs/${jobId}/applicants/${applicant.candidate_id}`);
+//     } else {
+//       showError("Candidate ID missing");
 //     }
-
-//     setProfileLoading(true);
-//     try {
-//       const result = await applicantsApiService.getCandidateFullProfile(
-//         applicant.candidate_id,
-//       );
-//       const data = result?.data || result;
-//       setProfile(data);
-//     } catch (error) {
-//       console.error(
-//         `Error fetching profile for candidate_id=${applicant.candidate_id}:`,
-//         error,
-//       );
-//       setProfileError(error.message);
-//       showError("Failed to load candidate profile");
-//     } finally {
-//       setProfileLoading(false);
-//     }
-//   };
-
-//   const handleCloseProfile = () => {
-//     setSelectedCandidate(null);
-//     setProfile(null);
-//     setProfileError(null);
 //   };
 
 //   const handleToggleFavourite = (applicant) => {
-//     // Wire this up to a PATCH/POST call to persist favourite state if needed.
+//     // Placeholder for favourite toggle
+//   };
+
+//   // ─── Resume opener with download log ─────────────────────────────
+//   const handleOpenResume = async (candidateId) => {
+//     try {
+//       // 1. Fetch full profile to get resume ID and file
+//       const result = await applicantsApiService.getCandidateFullProfile(candidateId);
+//       const data = result?.data || result;
+//       const resume = data?.candidate_resumes;
+//       if (!resume || !resume.resume_file) {
+//         showError("No resume available for this candidate");
+//         return;
+//       }
+
+//       // 2. Get the resume ID
+//       const resumeId = resume.id;
+//       if (!resumeId) {
+//         showError("Resume ID not found");
+//         return;
+//       }
+
+//       // 3. Get company ID (if not already fetched, try to fetch now)
+//       let cid = companyId;
+//       if (!cid && user?.id) {
+//         // Fallback: fetch company on the fly
+//         const res = await fetch(`${API_BASE_URL}/companies`);
+//         if (res.ok) {
+//           const data2 = await res.json();
+//           const companies = data2.data || data2.results || data2 || [];
+//           const found = companies.find(
+//             (c) => c.CompanyUser?.company_user_id === user.id
+//           );
+//           if (found) {
+//             cid = found.id;
+//             setCompanyId(cid);
+//           }
+//         }
+//       }
+
+//       if (!cid) {
+//         showError("Company ID not found. Please ensure you are associated with a company.");
+//         return;
+//       }
+
+//       // 4. Log the download
+//       const logPayload = {
+//         candidate_resume_id: resumeId,
+//         company_id: cid,
+//         downloaded_by: user?.id || null,
+//         // downloaded_at can be server-generated; we can omit or send ISO string
+//       };
+
+//       console.log("📤 Logging resume download:", logPayload);
+
+//       try {
+//         await applicantsApiService.logResumeDownload(logPayload);
+//         showSuccess("Resume download logged");
+//       } catch (logErr) {
+//         console.error("Failed to log resume download:", logErr);
+//         // Continue anyway – don't block the user from viewing the resume
+//       }
+
+//       // 5. Open the resume in a new tab
+//       const resumeUrl = resume.resume_file.startsWith("http")
+//         ? resume.resume_file
+//         : `${API_BASE_URL}${resume.resume_file}`;
+//       window.open(resumeUrl, "_blank");
+//     } catch (error) {
+//       console.error("Error opening resume:", error);
+//       showError("Failed to load resume");
+//     }
 //   };
 
 //   const filteredApplicants = useMemo(() => {
@@ -1216,11 +832,10 @@
 //   const endIndex = startIndex + itemsPerPage;
 //   const currentApplicants = filteredApplicants.slice(startIndex, endIndex);
 
-//   const goToPage = (page) =>
-//     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+//   const goToPage = (page) => setCurrentPage(Math.max(1, Math.min(page, totalPages)));
 
 //   return (
-//     <div className="min-h-screen">
+//     <div className="min-h-screen bg-gray-50">
 //       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
 //         {/* Header */}
 //         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -1290,9 +905,7 @@
 //           </div>
 //         ) : loadError ? (
 //           <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-//             <p className="text-red-500 font-medium">
-//               Failed to load applicants
-//             </p>
+//             <p className="text-red-500 font-medium">Failed to load applicants</p>
 //             <p className="text-sm text-gray-400 mt-1">{loadError}</p>
 //             <button
 //               onClick={fetchApplicants}
@@ -1317,8 +930,9 @@
 //                 <CandidateCard
 //                   key={applicant.application_id || applicant.candidate_id}
 //                   applicant={applicant}
-//                   onOpen={handleOpenProfile}
+//                   onCardClick={handleCardClick}
 //                   onToggleFavourite={handleToggleFavourite}
+//                   onOpenResume={handleOpenResume}
 //                 />
 //               ))}
 //             </div>
@@ -1379,20 +993,9 @@
 //           </>
 //         )}
 //       </div>
-
-//       {/* Full profile modal */}
-//       {selectedCandidate && (
-//         <ProfileModal
-//           profile={profile}
-//           loading={profileLoading}
-//           error={profileError}
-//           onClose={handleCloseProfile}
-//         />
-//       )}
 //     </div>
 //   );
 // }
-
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -1433,9 +1036,10 @@ import {
   TbSparkles,
 } from "react-icons/tb";
 import { useToast } from "../../context/ToastContext";
+import { useAuth } from "../../context/AuthContext";
 
 // ---------------------------------------------------------------------------
-// API Service (same as before)
+// API Service
 // ---------------------------------------------------------------------------
 const API_BASE_URL = "https://hire-me-jobs.onrender.com";
 
@@ -1458,10 +1062,21 @@ const applicantsApiService = {
     }
     return response.json();
   },
+  logResumeDownload: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/resume-download-logs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  },
 };
 
 // ---------------------------------------------------------------------------
-// Helpers (same as before)
+// Helpers
 // ---------------------------------------------------------------------------
 const asName = (val, fallback = "N/A") => {
   if (!val) return fallback;
@@ -1534,7 +1149,7 @@ const isRecentlyApplied = (dateString, days = 3) => {
 };
 
 // ---------------------------------------------------------------------------
-// Reusable bits (same)
+// Reusable bits
 // ---------------------------------------------------------------------------
 const StatusBadge = ({ status }) => {
   const normalized = (status || "").toLowerCase();
@@ -1605,20 +1220,30 @@ const SkillChip = ({ label, highlighted }) => (
 );
 
 // ---------------------------------------------------------------------------
-// Candidate Card (with navigation instead of modal)
+// Candidate Card
 // ---------------------------------------------------------------------------
 const CandidateCard = ({
   applicant,
-  onCardClick, // new prop: function to navigate
+  onCardClick,
   onToggleFavourite,
   jobSkillTerms,
+  onOpenResume,
 }) => {
   const [favourite, setFavourite] = useState(!!applicant.is_favourite);
+  const [resumeLoading, setResumeLoading] = useState(false);
 
   const handleFavourite = (e) => {
     e.stopPropagation();
     setFavourite((f) => !f);
     onToggleFavourite && onToggleFavourite(applicant);
+  };
+
+  const handleResumeClick = async (e) => {
+    e.stopPropagation();
+    if (!applicant.candidate_id) return;
+    setResumeLoading(true);
+    await onOpenResume(applicant.candidate_id);
+    setResumeLoading(false);
   };
 
   const stopPropagation = (e) => e.stopPropagation();
@@ -1629,7 +1254,7 @@ const CandidateCard = ({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-purple-200 transition-all w-full overflow-hidden">
-      {/* Top meta bar – not clickable */}
+      {/* Top meta bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5 bg-gray-50 border-b border-gray-100 text-xs text-gray-500">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1">
@@ -1640,19 +1265,31 @@ const CandidateCard = ({
             Stage: <StatusBadge status={applicant.status} />
           </span>
         </div>
-        <div className="flex items-center gap-3 text-gray-400">
+        <div className="flex items-center gap-3">
           {applicant.updated_at && (
             <span>Updated: {formatDate(applicant.updated_at)}</span>
           )}
+          <button
+            onClick={handleResumeClick}
+            disabled={resumeLoading}
+            className="flex items-center gap-1 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg px-2.5 py-1 hover:bg-purple-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {resumeLoading ? (
+              <span className="inline-block w-3 h-3 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <TbFileText size={14} />
+            )}
+            {resumeLoading ? "Loading..." : "Resume"}
+          </button>
         </div>
       </div>
 
-      {/* Main body – clickable to navigate to details */}
+      {/* Main body */}
       <div
         className="flex flex-col lg:flex-row gap-5 p-5 cursor-pointer"
-        onClick={() => onCardClick(applicant)} // navigate
+        onClick={() => onCardClick(applicant)}
       >
-        {/* Left: candidate details (same as before, but with navigation) */}
+        {/* Left: candidate details */}
         <div className="flex-1 min-w-0 flex gap-4">
           <div
             className="shrink-0 w-14 h-14 rounded-full bg-purple-100 text-purple-700 font-semibold text-lg flex items-center justify-center overflow-hidden"
@@ -1673,7 +1310,6 @@ const CandidateCard = ({
           </div>
 
           <div className="flex-1 min-w-0">
-            {/* Name + badges */}
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
@@ -1693,7 +1329,6 @@ const CandidateCard = ({
               )}
             </div>
 
-            {/* Experience / salary / notice / location row */}
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
               {applicant.total_experience && (
                 <span className="flex items-center gap-1">
@@ -1721,7 +1356,6 @@ const CandidateCard = ({
               )}
             </div>
 
-            {/* Current role */}
             {applicant.current_role && (
               <div className="mt-2.5 text-sm">
                 <span className="text-gray-400">Current: </span>
@@ -1743,7 +1377,6 @@ const CandidateCard = ({
               </div>
             )}
 
-            {/* Skills */}
             {skillNames.length > 0 && (
               <div className="mt-2 text-sm text-gray-700 leading-relaxed">
                 <span className="text-gray-400">Skills: </span>
@@ -1772,7 +1405,6 @@ const CandidateCard = ({
               </div>
             )}
 
-            {/* Preferred locations */}
             {applicant.preferred_locations?.length > 0 && (
               <div className="mt-2 text-sm">
                 <span className="text-gray-400">Pref. location: </span>
@@ -1782,7 +1414,6 @@ const CandidateCard = ({
               </div>
             )}
 
-            {/* Education */}
             {applicant.education_label && (
               <div className="mt-1 text-sm">
                 <span className="text-gray-400">Education: </span>
@@ -1795,7 +1426,6 @@ const CandidateCard = ({
               </div>
             )}
 
-            {/* Bottom actions – stop propagation */}
             <div
               className="mt-3 flex items-center gap-4 text-xs text-gray-500"
               onClick={stopPropagation}
@@ -1819,20 +1449,9 @@ const CandidateCard = ({
           </div>
         </div>
 
-        {/* Right panel – same as before */}
+        {/* Right panel */}
         <div className="w-full lg:w-72 shrink-0 lg:border-l lg:border-gray-100 lg:pl-5 flex flex-col gap-3">
           <div className="flex items-center gap-2" onClick={stopPropagation}>
-            {applicant.resume_url && (
-              <a
-                href={applicant.resume_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-1 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50"
-              >
-                <TbFileText size={14} /> Resume
-              </a>
-            )}
             {applicant.linkedin_url && (
               <a
                 href={applicant.linkedin_url}
@@ -1903,12 +1522,13 @@ const CandidateCard = ({
 };
 
 // ---------------------------------------------------------------------------
-// Main Component (JobApplicants)
+// Main Component
 // ---------------------------------------------------------------------------
 export default function JobApplicants() {
   const { id: jobId } = useParams();
   const navigate = useNavigate();
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
+  const { user } = useAuth();
 
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1916,9 +1536,38 @@ export default function JobApplicants() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
+  const [companyId, setCompanyId] = useState(null);
+  const [fetchingCompany, setFetchingCompany] = useState(false);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6);
 
+  // ─── Fetch company ID ──────────────────────────────────────────
+  useEffect(() => {
+    const fetchCompanyId = async () => {
+      if (!user?.id) return;
+      setFetchingCompany(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/companies`);
+        if (!res.ok) throw new Error("Failed to fetch companies");
+        const data = await res.json();
+        const companies = data.data || data.results || data || [];
+        const found = companies.find(
+          (c) => c.CompanyUser?.company_user_id === user.id
+        );
+        if (found) {
+          setCompanyId(found.id);
+        }
+      } catch (error) {
+        console.error("Error fetching company ID:", error);
+      } finally {
+        setFetchingCompany(false);
+      }
+    };
+    fetchCompanyId();
+  }, [user]);
+
+  // ─── Fetch applicants ──────────────────────────────────────────
   useEffect(() => {
     if (jobId) fetchApplicants();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2065,7 +1714,6 @@ export default function JobApplicants() {
     }
   };
 
-  // Navigate to applicant details page
   const handleCardClick = (applicant) => {
     if (applicant.candidate_id) {
       navigate(`/jobs/${jobId}/applicants/${applicant.candidate_id}`);
@@ -2074,8 +1722,73 @@ export default function JobApplicants() {
     }
   };
 
-  const handleToggleFavourite = (applicant) => {
-    // Placeholder for favourite toggle
+  const handleToggleFavourite = (applicant) => {};
+
+  // ─── Resume opener with download log ──────────────────────────
+  const handleOpenResume = async (candidateId) => {
+    try {
+      const result = await applicantsApiService.getCandidateFullProfile(candidateId);
+      const data = result?.data || result;
+      const resume = data?.candidate_resumes;
+      if (!resume || !resume.resume_file) {
+        showError("No resume available for this candidate");
+        return;
+      }
+
+      const resumeId = resume.id;
+      if (!resumeId) {
+        showError("Resume ID not found");
+        return;
+      }
+
+      let cid = companyId;
+      if (!cid && user?.id) {
+        const res = await fetch(`${API_BASE_URL}/companies`);
+        if (res.ok) {
+          const data2 = await res.json();
+          const companies = data2.data || data2.results || data2 || [];
+          const found = companies.find(
+            (c) => c.CompanyUser?.company_user_id === user.id
+          );
+          if (found) {
+            cid = found.id;
+            setCompanyId(cid);
+          }
+        }
+      }
+
+      if (!cid) {
+        showError("Company ID not found. Please ensure you are associated with a company.");
+        return;
+      }
+
+      // ─── Payload with created_by & updated_by ──────────────────
+      const userId = user?.id || null;
+      const logPayload = {
+        candidate_resume_id: resumeId,
+        company_id: cid,
+        downloaded_by: userId,
+        created_by: userId,   // <-- added
+        updated_by: userId,   // <-- added
+      };
+
+      console.log("📤 Logging resume download:", logPayload);
+
+      try {
+        await applicantsApiService.logResumeDownload(logPayload);
+        showSuccess("Resume download logged");
+      } catch (logErr) {
+        console.error("Failed to log resume download:", logErr);
+      }
+
+      const resumeUrl = resume.resume_file.startsWith("http")
+        ? resume.resume_file
+        : `${API_BASE_URL}${resume.resume_file}`;
+      window.open(resumeUrl, "_blank");
+    } catch (error) {
+      console.error("Error opening resume:", error);
+      showError("Failed to load resume");
+    }
   };
 
   const filteredApplicants = useMemo(() => {
@@ -2194,11 +1907,11 @@ export default function JobApplicants() {
                   applicant={applicant}
                   onCardClick={handleCardClick}
                   onToggleFavourite={handleToggleFavourite}
+                  onOpenResume={handleOpenResume}
                 />
               ))}
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white rounded-xl border border-gray-200 px-4 py-3 shadow-sm">
                 <div className="text-sm text-gray-500">
