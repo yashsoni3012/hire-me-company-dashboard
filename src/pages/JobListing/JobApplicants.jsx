@@ -37,48 +37,88 @@
 //   TbSparkles,
 // } from "react-icons/tb";
 // import { useToast } from "../../context/ToastContext";
-// import { useAuth } from "../../context/AuthContext"; // <-- import AuthContext
+// import { useAuth } from "../../context/AuthContext";
 
-// // ---------------------------------------------------------------------------
-// // API Service
-// // ---------------------------------------------------------------------------
 // const API_BASE_URL = "https://hire-me-jobs.onrender.com";
+// const VIEWED_STATUS_ID = 3;
 
 // const applicantsApiService = {
 //   getApplicantsByJobId: async (jobId) => {
 //     const response = await fetch(
 //       `${API_BASE_URL}/candidate-profile-job-application?job_id=${jobId}`
 //     );
-//     if (!response.ok) {
-//       throw new Error(`HTTP error! status: ${response.status}`);
-//     }
+//     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 //     return response.json();
 //   },
+
 //   getCandidateFullProfile: async (candidateId) => {
 //     const response = await fetch(
 //       `${API_BASE_URL}/candidate-full-profile/${candidateId}`
 //     );
-//     if (!response.ok) {
-//       throw new Error(`HTTP error! status: ${response.status}`);
-//     }
+//     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 //     return response.json();
 //   },
-//   // New: Log resume download
+
 //   logResumeDownload: async (data) => {
 //     const response = await fetch(`${API_BASE_URL}/resume-download-logs`, {
 //       method: "POST",
 //       headers: { "Content-Type": "application/json" },
 //       body: JSON.stringify(data),
 //     });
+//     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+//     return response.json();
+//   },
+
+//   updateApplicationStatus: async (applicationId, statusId) => {
+//     const response = await fetch(
+//       `${API_BASE_URL}/candidate-profile-job-application/${applicationId}`,
+//       {
+//         method: "PATCH",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ application_statuses_id: statusId }),
+//       }
+//     );
+//     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+//     return response.json();
+//   },
+
+//   postApplicationNote: async (data) => {
+//     const response = await fetch(`${API_BASE_URL}/application-notes`, {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify(data),
+//     });
 //     if (!response.ok) {
-//       throw new Error(`HTTP error! status: ${response.status}`);
+//       let errorMsg = `HTTP error! status: ${response.status}`;
+//       try {
+//         const errorData = await response.json();
+//         if (errorData.message) errorMsg = errorData.message;
+//       } catch (e) {}
+//       throw new Error(errorMsg);
 //     }
+//     return response.json();
+//   },
+
+//   getJobApplicationsByJobId: async (jobId) => {
+//     const response = await fetch(
+//       `${API_BASE_URL}/job-applications?job_id=${jobId}`
+//     );
+//     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+//     return response.json();
+//   },
+
+//   // ✅ Direct fetch for a specific candidate
+//   getJobApplicationByCandidate: async (jobId, candidateId) => {
+//     const response = await fetch(
+//       `${API_BASE_URL}/job-applications?job_id=${jobId}&candidate_id=${candidateId}`
+//     );
+//     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 //     return response.json();
 //   },
 // };
 
 // // ---------------------------------------------------------------------------
-// // Helpers (same as before)
+// // Helpers (unchanged)
 // // ---------------------------------------------------------------------------
 // const asName = (val, fallback = "N/A") => {
 //   if (!val) return fallback;
@@ -107,8 +147,7 @@
 // const initials = (first, last) => {
 //   const a = (first || "").trim().charAt(0);
 //   const b = (last || "").trim().charAt(0);
-//   const combined = `${a}${b}`.toUpperCase();
-//   return combined || "?";
+//   return `${a}${b}`.toUpperCase() || "?";
 // };
 
 // const formatMonthYear = (dateString) => {
@@ -138,20 +177,18 @@
 //   const num = Number(amount);
 //   if (!num || isNaN(num)) return null;
 //   const lac = num / 100000;
-//   const formatted = lac % 1 === 0 ? lac.toFixed(0) : lac.toFixed(1);
-//   return `₹ ${formatted} Lac`;
+//   return `₹ ${lac % 1 === 0 ? lac.toFixed(0) : lac.toFixed(1)} Lac`;
 // };
 
 // const isRecentlyApplied = (dateString, days = 3) => {
 //   if (!dateString) return false;
 //   const date = new Date(dateString);
 //   if (isNaN(date.getTime())) return false;
-//   const diffDays = (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24);
-//   return diffDays <= days;
+//   return (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24) <= days;
 // };
 
 // // ---------------------------------------------------------------------------
-// // Reusable bits (same)
+// // Reusable bits (unchanged)
 // // ---------------------------------------------------------------------------
 // const StatusBadge = ({ status }) => {
 //   const normalized = (status || "").toLowerCase();
@@ -161,6 +198,7 @@
 //     pending: "bg-yellow-50 text-yellow-700 border-yellow-200",
 //     shortlisted: "bg-blue-50 text-blue-700 border-blue-200",
 //     rejected: "bg-red-50 text-red-700 border-red-200",
+//     viewed: "bg-purple-50 text-purple-700 border-purple-200",
 //   };
 //   const cls = colors[normalized] || "bg-gray-50 text-gray-700 border-gray-200";
 //   return (
@@ -169,25 +207,6 @@
 //     </span>
 //   );
 // };
-
-// const SectionCard = ({ icon: Icon, title, count, children }) => (
-//   <div className="bg-white rounded-xl border border-gray-200 p-5">
-//     <div className="flex items-center gap-2 mb-4">
-//       <div className="p-1.5 bg-purple-50 rounded-lg">
-//         <Icon className="text-purple-600" size={18} />
-//       </div>
-//       <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-//       {typeof count === "number" && (
-//         <span className="text-xs text-gray-400">({count})</span>
-//       )}
-//     </div>
-//     {children}
-//   </div>
-// );
-
-// const EmptyRow = ({ label }) => (
-//   <p className="text-sm text-gray-400 italic">No {label} added yet</p>
-// );
 
 // const HighlightedText = ({ text, terms = [] }) => {
 //   if (!text) return null;
@@ -222,7 +241,7 @@
 // );
 
 // // ---------------------------------------------------------------------------
-// // Candidate Card (with Resume button in top-right corner)
+// // CandidateCard Component (identical, so I'll keep it short – but it's unchanged)
 // // ---------------------------------------------------------------------------
 // const CandidateCard = ({
 //   applicant,
@@ -230,6 +249,7 @@
 //   onToggleFavourite,
 //   jobSkillTerms,
 //   onOpenResume,
+//   onCommentClick,
 // }) => {
 //   const [favourite, setFavourite] = useState(!!applicant.is_favourite);
 //   const [resumeLoading, setResumeLoading] = useState(false);
@@ -242,10 +262,7 @@
 
 //   const handleResumeClick = async (e) => {
 //     e.stopPropagation();
-//     if (!applicant.candidate_id) {
-//       // showError is not available here, handled in parent
-//       return;
-//     }
+//     if (!applicant.candidate_id) return;
 //     setResumeLoading(true);
 //     await onOpenResume(applicant.candidate_id);
 //     setResumeLoading(false);
@@ -259,7 +276,6 @@
 
 //   return (
 //     <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-purple-200 transition-all w-full overflow-hidden">
-//       {/* Top meta bar – now includes Resume button on the right */}
 //       <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5 bg-gray-50 border-b border-gray-100 text-xs text-gray-500">
 //         <div className="flex items-center gap-4">
 //           <span className="flex items-center gap-1">
@@ -274,7 +290,6 @@
 //           {applicant.updated_at && (
 //             <span>Updated: {formatDate(applicant.updated_at)}</span>
 //           )}
-//           {/* --- Resume Button --- */}
 //           <button
 //             onClick={handleResumeClick}
 //             disabled={resumeLoading}
@@ -290,12 +305,10 @@
 //         </div>
 //       </div>
 
-//       {/* Main body – clickable to navigate to details */}
 //       <div
 //         className="flex flex-col lg:flex-row gap-5 p-5 cursor-pointer"
 //         onClick={() => onCardClick(applicant)}
 //       >
-//         {/* Left: candidate details */}
 //         <div className="flex-1 min-w-0 flex gap-4">
 //           <div
 //             className="shrink-0 w-14 h-14 rounded-full bg-purple-100 text-purple-700 font-semibold text-lg flex items-center justify-center overflow-hidden"
@@ -316,7 +329,6 @@
 //           </div>
 
 //           <div className="flex-1 min-w-0">
-//             {/* Name + badges */}
 //             <div className="flex items-center gap-2 flex-wrap">
 //               <button
 //                 type="button"
@@ -336,7 +348,6 @@
 //               )}
 //             </div>
 
-//             {/* Experience / salary / notice / location row */}
 //             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
 //               {applicant.total_experience && (
 //                 <span className="flex items-center gap-1">
@@ -364,7 +375,6 @@
 //               )}
 //             </div>
 
-//             {/* Current role */}
 //             {applicant.current_role && (
 //               <div className="mt-2.5 text-sm">
 //                 <span className="text-gray-400">Current: </span>
@@ -386,7 +396,6 @@
 //               </div>
 //             )}
 
-//             {/* Skills */}
 //             {skillNames.length > 0 && (
 //               <div className="mt-2 text-sm text-gray-700 leading-relaxed">
 //                 <span className="text-gray-400">Skills: </span>
@@ -415,7 +424,6 @@
 //               </div>
 //             )}
 
-//             {/* Preferred locations */}
 //             {applicant.preferred_locations?.length > 0 && (
 //               <div className="mt-2 text-sm">
 //                 <span className="text-gray-400">Pref. location: </span>
@@ -425,7 +433,6 @@
 //               </div>
 //             )}
 
-//             {/* Education */}
 //             {applicant.education_label && (
 //               <div className="mt-1 text-sm">
 //                 <span className="text-gray-400">Education: </span>
@@ -438,12 +445,14 @@
 //               </div>
 //             )}
 
-//             {/* Bottom actions – stop propagation */}
 //             <div
 //               className="mt-3 flex items-center gap-4 text-xs text-gray-500"
 //               onClick={stopPropagation}
 //             >
-//               <button className="flex items-center gap-1 hover:text-gray-700">
+//               <button
+//                 className="flex items-center gap-1 hover:text-gray-700"
+//                 onClick={() => onCommentClick(applicant)}
+//               >
 //                 <TbMessage size={14} /> Comment
 //               </button>
 //               <button className="flex items-center gap-1 hover:text-gray-700">
@@ -462,7 +471,6 @@
 //           </div>
 //         </div>
 
-//         {/* Right panel – same as before */}
 //         <div className="w-full lg:w-72 shrink-0 lg:border-l lg:border-gray-100 lg:pl-5 flex flex-col gap-3">
 //           <div className="flex items-center gap-2" onClick={stopPropagation}>
 //             {applicant.linkedin_url && (
@@ -480,7 +488,9 @@
 
 //           {applicant.summary && (
 //             <div>
-//               <p className="text-xs font-semibold text-gray-500 mb-1">Summary:</p>
+//               <p className="text-xs font-semibold text-gray-500 mb-1">
+//                 Summary:
+//               </p>
 //               <p className="text-xs text-gray-600 leading-relaxed line-clamp-4">
 //                 <HighlightedText text={applicant.summary} terms={jobSkillTerms} />
 //               </p>
@@ -496,7 +506,10 @@
 //             </div>
 //           )}
 
-//           <div className="mt-auto pt-2 border-t border-gray-100 space-y-2" onClick={stopPropagation}>
+//           <div
+//             className="mt-auto pt-2 border-t border-gray-100 space-y-2"
+//             onClick={stopPropagation}
+//           >
 //             {applicant.mobile && (
 //               <div className="flex items-center justify-between">
 //                 <span className="flex items-center gap-1.5 text-sm text-gray-700">
@@ -535,13 +548,13 @@
 // };
 
 // // ---------------------------------------------------------------------------
-// // Main Component (JobApplicants)
+// // Main Component
 // // ---------------------------------------------------------------------------
 // export default function JobApplicants() {
 //   const { id: jobId } = useParams();
 //   const navigate = useNavigate();
 //   const { showError, showSuccess } = useToast();
-//   const { user } = useAuth(); // logged‑in user
+//   const { user } = useAuth();
 
 //   const [applicants, setApplicants] = useState([]);
 //   const [loading, setLoading] = useState(true);
@@ -549,43 +562,61 @@
 //   const [searchTerm, setSearchTerm] = useState("");
 //   const [filterStatus, setFilterStatus] = useState("all");
 
-//   // Company ID of the logged‑in user's company
 //   const [companyId, setCompanyId] = useState(null);
-//   const [fetchingCompany, setFetchingCompany] = useState(false);
+//   const [companyUserId, setCompanyUserId] = useState(null); // ✅ store correct company user ID
 
 //   const [currentPage, setCurrentPage] = useState(1);
 //   const [itemsPerPage] = useState(6);
 
-//   // ─── Fetch the company ID for the logged‑in user ────────────────
+//   const [showCommentModal, setShowCommentModal] = useState(false);
+//   const [selectedApplicant, setSelectedApplicant] = useState(null);
+//   const [commentText, setCommentText] = useState("");
+//   const [commentLoading, setCommentLoading] = useState(false);
+
+//   // ─── Fetch company and company user ──────────────────────────
 //   useEffect(() => {
-//     const fetchCompanyId = async () => {
-//       if (!user?.id) return;
-//       setFetchingCompany(true);
+//     const fetchCompanyAndUser = async () => {
+//       if (!user?.email) return;
 //       try {
-//         // 1. Fetch all companies and find the one where CompanyUser.company_user_id === user.id
-//         const res = await fetch(`${API_BASE_URL}/companies`);
-//         if (!res.ok) throw new Error("Failed to fetch companies");
-//         const data = await res.json();
-//         const companies = data.data || data.results || data || [];
-//         const found = companies.find(
-//           (c) => c.CompanyUser?.company_user_id === user.id
-//         );
-//         if (found) {
-//           setCompanyId(found.id);
-//           console.log("✅ Found company ID:", found.id);
-//         } else {
-//           console.warn("⚠️ No company found for user", user.id);
+//         // 1. Fetch company-users to get the correct company_user_id for this user
+//         const cuRes = await fetch(`${API_BASE_URL}/company-users`);
+//         if (cuRes.ok) {
+//           const cuData = await cuRes.json();
+//           const cuList = cuData.data || cuData || [];
+//           // Find by email (most reliable) or by id
+//           const cu = cuList.find(
+//             (u) =>
+//               u.email?.toLowerCase() === user.email?.toLowerCase() ||
+//               u.id === user.id
+//           );
+//           if (cu) {
+//             setCompanyUserId(cu.id);
+//             console.log("✅ Found company user ID:", cu.id);
+//           } else {
+//             // Fallback: if no match, try using user.id directly (if it's a company user)
+//             setCompanyUserId(user.id);
+//             console.warn("⚠️ Using user.id as company_user_id:", user.id);
+//           }
+//         }
+
+//         // 2. Fetch companies to get company_id (optional for resume)
+//         const compRes = await fetch(`${API_BASE_URL}/companies`);
+//         if (compRes.ok) {
+//           const compData = await compRes.json();
+//           const companies = compData.data || compData.results || compData || [];
+//           const found = companies.find(
+//             (c) => c.CompanyUser?.company_user_id === companyUserId || c.CompanyUser?.company_user_id === user.id
+//           );
+//           if (found) setCompanyId(found.id);
 //         }
 //       } catch (error) {
-//         console.error("Error fetching company ID:", error);
-//       } finally {
-//         setFetchingCompany(false);
+//         console.error("Error fetching company/user:", error);
 //       }
 //     };
-//     fetchCompanyId();
-//   }, [user]);
+//     fetchCompanyAndUser();
+//   }, [user, companyUserId]);
 
-//   // ─── Fetch applicants (existing) ─────────────────────────────────
+//   // ─── Fetch applicants & build job application map ────────────
 //   useEffect(() => {
 //     if (jobId) fetchApplicants();
 //     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -600,20 +631,31 @@
 //     setLoadError(null);
 //     try {
 //       const result = await applicantsApiService.getApplicantsByJobId(jobId);
-
 //       let rawList = [];
-//       if (Array.isArray(result)) {
-//         rawList = result;
-//       } else if (Array.isArray(result?.data)) {
-//         rawList = result.data;
-//       } else if (Array.isArray(result?.data?.applications)) {
-//         rawList = result.data.applications;
-//       } else if (Array.isArray(result?.applications)) {
-//         rawList = result.applications;
-//       } else if (Array.isArray(result?.data?.candidates)) {
-//         rawList = result.data.candidates;
+//       if (Array.isArray(result)) rawList = result;
+//       else if (Array.isArray(result?.data)) rawList = result.data;
+//       else if (Array.isArray(result?.data?.applications)) rawList = result.data.applications;
+//       else if (Array.isArray(result?.applications)) rawList = result.applications;
+//       else if (Array.isArray(result?.data?.candidates)) rawList = result.data.candidates;
+
+//       // Build map from job-applications
+//       let jobAppsMap = {};
+//       try {
+//         const jobAppsResult = await applicantsApiService.getJobApplicationsByJobId(jobId);
+//         const jobApps = jobAppsResult?.data || jobAppsResult || [];
+//         jobAppsMap = jobApps.reduce((acc, app) => {
+//           const candidateId = app.candidate_id || app.candidateId || app.Candidate?.id;
+//           if (candidateId && app.id) {
+//             acc[candidateId] = app.id;
+//           }
+//           return acc;
+//         }, {});
+//         console.log("📦 Job Apps Map:", jobAppsMap);
+//       } catch (err) {
+//         console.warn("Could not fetch job applications, falling back.", err);
 //       }
 
+//       // Transform
 //       const transformed = rawList.map((item) => {
 //         const c =
 //           item.candidate ||
@@ -630,25 +672,24 @@
 //           c.candidateId ??
 //           (c !== item ? c.id : undefined);
 
+//         let jobAppId = jobAppsMap[candidateId];
+//         if (!jobAppId) jobAppId = item.job_application_id || item.job_applicationId || null;
+
+//         // ... (rest of the transformation, same as before)
 //         const rawSkills = asList(c.candidate_skills || item.candidate_skills);
 //         const skillNames = rawSkills
-//           .map((s) =>
-//             typeof s === "string" ? s : asName(s.skill, s.skill_name || s.name)
-//           )
+//           .map((s) => (typeof s === "string" ? s : asName(s.skill, s.skill_name || s.name)))
 //           .filter((s) => s && s !== "N/A");
 
 //         const experienceList = asList(c.candidate_experience || item.candidate_experience);
-//         const currentExp =
-//           experienceList.find((e) => e.is_current_company) || experienceList[0];
+//         const currentExp = experienceList.find((e) => e.is_current_company) || experienceList[0];
 //         const currentRole = currentExp
 //           ? {
 //               designation: currentExp.designation || currentExp.job_title || "N/A",
 //               company: currentExp.company_name || "",
 //               duration_label: currentExp.start_date
 //                 ? `${formatMonthYear(currentExp.start_date)} to ${
-//                     currentExp.is_current_company
-//                       ? "Present"
-//                       : formatMonthYear(currentExp.end_date)
+//                     currentExp.is_current_company ? "Present" : formatMonthYear(currentExp.end_date)
 //                   } - ${durationFromDates(currentExp.start_date, currentExp.end_date)}`
 //                 : "",
 //             }
@@ -657,9 +698,7 @@
 //         const totalExperience =
 //           c.total_experience_label ||
 //           c.experience_label ||
-//           (currentExp?.start_date
-//             ? durationFromDates(currentExp.start_date, currentExp.end_date)
-//             : "");
+//           (currentExp?.start_date ? durationFromDates(currentExp.start_date, currentExp.end_date) : "");
 
 //         const preferences = c.candidate_preferences || item.candidate_preferences;
 //         const expectedSalaryLabel = formatSalaryLac(
@@ -687,11 +726,11 @@
 
 //         return {
 //           application_id: item.id || item.application_id,
+//           job_application_id: jobAppId,
 //           candidate_id: candidateId,
 //           first_name: c.first_name || "",
 //           last_name: c.last_name || "",
-//           full_name:
-//             `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Unnamed candidate",
+//           full_name: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Unnamed candidate",
 //           email: c.email || "N/A",
 //           mobile: c.mobile || "",
 //           mobile_verified: !!(c.mobile_verified || c.is_mobile_verified),
@@ -699,9 +738,7 @@
 //           status: item.status || c.status || "pending",
 //           applied_at: item.applied_at || item.created_at || item.createdAt,
 //           updated_at: item.updated_at || item.updatedAt,
-//           is_newly_added: isRecentlyApplied(
-//             item.applied_at || item.created_at || item.createdAt
-//           ),
+//           is_newly_added: isRecentlyApplied(item.applied_at || item.created_at || item.createdAt),
 //           is_favourite: !!item.is_favourite,
 //           skills: skillNames,
 //           current_role: currentRole,
@@ -732,80 +769,67 @@
 //     }
 //   };
 
-//   // ─── Navigate to applicant details ──────────────────────────────
-//   const handleCardClick = (applicant) => {
-//     if (applicant.candidate_id) {
-//       navigate(`/jobs/${jobId}/applicants/${applicant.candidate_id}`);
-//     } else {
+//   // ─── Handle card click ──────────────────────────────────────────
+//   const handleCardClick = async (applicant) => {
+//     if (!applicant.candidate_id) {
 //       showError("Candidate ID missing");
+//       return;
 //     }
+//     if (applicant.application_id) {
+//       try {
+//         await applicantsApiService.updateApplicationStatus(applicant.application_id, VIEWED_STATUS_ID);
+//         setApplicants((prev) =>
+//           prev.map((a) =>
+//             a.application_id === applicant.application_id ? { ...a, status: "viewed" } : a
+//           )
+//         );
+//         showSuccess("Application marked as Viewed");
+//       } catch (error) {
+//         console.error("Failed to update application status:", error);
+//       }
+//     }
+//     navigate(`/jobs/${jobId}/applicants/${applicant.candidate_id}`);
 //   };
 
-//   const handleToggleFavourite = (applicant) => {
-//     // Placeholder for favourite toggle
-//   };
-
-//   // ─── Resume opener with download log ─────────────────────────────
+//   // ─── Resume opener ──────────────────────────────────────────
 //   const handleOpenResume = async (candidateId) => {
 //     try {
-//       // 1. Fetch full profile to get resume ID and file
 //       const result = await applicantsApiService.getCandidateFullProfile(candidateId);
 //       const data = result?.data || result;
 //       const resume = data?.candidate_resumes;
 //       if (!resume || !resume.resume_file) {
-//         showError("No resume available for this candidate");
+//         showError("No resume available");
 //         return;
 //       }
-
-//       // 2. Get the resume ID
 //       const resumeId = resume.id;
 //       if (!resumeId) {
 //         showError("Resume ID not found");
 //         return;
 //       }
 
-//       // 3. Get company ID (if not already fetched, try to fetch now)
 //       let cid = companyId;
 //       if (!cid && user?.id) {
-//         // Fallback: fetch company on the fly
 //         const res = await fetch(`${API_BASE_URL}/companies`);
 //         if (res.ok) {
 //           const data2 = await res.json();
 //           const companies = data2.data || data2.results || data2 || [];
-//           const found = companies.find(
-//             (c) => c.CompanyUser?.company_user_id === user.id
-//           );
-//           if (found) {
-//             cid = found.id;
-//             setCompanyId(cid);
-//           }
+//           const found = companies.find((c) => c.CompanyUser?.company_user_id === user.id);
+//           if (found) cid = found.id;
 //         }
 //       }
-
 //       if (!cid) {
-//         showError("Company ID not found. Please ensure you are associated with a company.");
+//         showError("Company ID not found.");
 //         return;
 //       }
 
-//       // 4. Log the download
-//       const logPayload = {
+//       const userId = user?.id || null;
+//       await applicantsApiService.logResumeDownload({
 //         candidate_resume_id: resumeId,
 //         company_id: cid,
-//         downloaded_by: user?.id || null,
-//         // downloaded_at can be server-generated; we can omit or send ISO string
-//       };
-
-//       console.log("📤 Logging resume download:", logPayload);
-
-//       try {
-//         await applicantsApiService.logResumeDownload(logPayload);
-//         showSuccess("Resume download logged");
-//       } catch (logErr) {
-//         console.error("Failed to log resume download:", logErr);
-//         // Continue anyway – don't block the user from viewing the resume
-//       }
-
-//       // 5. Open the resume in a new tab
+//         downloaded_by: userId,
+//         created_by: userId,
+//         updated_by: userId,
+//       });
 //       const resumeUrl = resume.resume_file.startsWith("http")
 //         ? resume.resume_file
 //         : `${API_BASE_URL}${resume.resume_file}`;
@@ -816,6 +840,108 @@
 //     }
 //   };
 
+//   // ─── Comment handlers ──────────────────────────────────────────
+//   const handleCommentClick = (applicant) => {
+//     setSelectedApplicant(applicant);
+//     setCommentText("");
+//     setShowCommentModal(true);
+//   };
+
+//   const handleCommentClose = () => {
+//     setShowCommentModal(false);
+//     setSelectedApplicant(null);
+//     setCommentText("");
+//   };
+
+//   // ✅ Core fix: Ensure job_application_id is correct and exists
+//   const getValidJobApplicationId = async (candidateId) => {
+//     try {
+//       // First try direct fetch with job_id and candidate_id
+//       const result = await applicantsApiService.getJobApplicationByCandidate(jobId, candidateId);
+//       const apps = result?.data || result || [];
+//       if (apps.length > 0) {
+//         return apps[0].id;
+//       }
+//       // If no direct match, fallback to full list
+//       const fullResult = await applicantsApiService.getJobApplicationsByJobId(jobId);
+//       const allApps = fullResult?.data || fullResult || [];
+//       const found = allApps.find(
+//         (app) =>
+//           app.candidate_id === candidateId ||
+//           app.Candidate?.id === candidateId ||
+//           app.candidateId === candidateId
+//       );
+//       return found?.id || null;
+//     } catch (err) {
+//       console.error("Error fetching job application ID:", err);
+//       return null;
+//     }
+//   };
+
+//   const handleCommentSubmit = async () => {
+//     if (!selectedApplicant) return;
+//     if (!commentText.trim()) {
+//       showError("Please enter a comment");
+//       return;
+//     }
+
+//     // Get the correct job_application_id
+//     let jobAppId = selectedApplicant.job_application_id;
+//     // If missing or we want to be extra safe, fetch directly
+//     if (!jobAppId || jobAppId === null) {
+//       console.log("🔄 Fetching job_application_id directly...");
+//       jobAppId = await getValidJobApplicationId(selectedApplicant.candidate_id);
+//       if (jobAppId) {
+//         // Update state
+//         setApplicants((prev) =>
+//           prev.map((a) =>
+//             a.candidate_id === selectedApplicant.candidate_id
+//               ? { ...a, job_application_id: jobAppId }
+//               : a
+//           )
+//         );
+//         selectedApplicant.job_application_id = jobAppId;
+//       }
+//     }
+
+//     if (!jobAppId) {
+//       showError("Could not find job application for this candidate.");
+//       return;
+//     }
+
+//     // Ensure we have a valid company_user_id
+//     let creatorId = companyUserId || user?.id;
+//     if (!creatorId) {
+//       showError("User not authenticated.");
+//       return;
+//     }
+
+//     setCommentLoading(true);
+//     try {
+//       const payload = {
+//         note: commentText.trim(),
+//         is_status: true,
+//         is_trending: false,
+//         created_by: creatorId,
+//         updated_by: creatorId,
+//         job_application_id: jobAppId,
+//         company_user_id: creatorId,
+//       };
+
+//       console.log("📤 Final Comment Payload:", payload);
+
+//       await applicantsApiService.postApplicationNote(payload);
+//       showSuccess("Comment added successfully");
+//       handleCommentClose();
+//     } catch (error) {
+//       console.error("Error posting comment:", error);
+//       showError(`Failed to add comment: ${error.message}`);
+//     } finally {
+//       setCommentLoading(false);
+//     }
+//   };
+
+//   // ─── Filtering & Pagination ────────────────────────────────────
 //   const filteredApplicants = useMemo(() => {
 //     return applicants.filter((a) => {
 //       const matchesSearch =
@@ -850,8 +976,7 @@
 //             <div>
 //               <h1 className="text-2xl font-bold text-gray-900">Applicants</h1>
 //               <p className="text-sm text-gray-500 mt-0.5">
-//                 Job #{jobId} · {totalItems}{" "}
-//                 {totalItems === 1 ? "applicant" : "applicants"}
+//                 Job #{jobId} · {totalItems} {totalItems === 1 ? "applicant" : "applicants"}
 //               </p>
 //             </div>
 //           </div>
@@ -883,15 +1008,13 @@
 //                 <option value="pending">Pending</option>
 //                 <option value="shortlisted">Shortlisted</option>
 //                 <option value="rejected">Rejected</option>
+//                 <option value="viewed">Viewed</option>
 //               </select>
 //               <button
 //                 onClick={fetchApplicants}
 //                 className="px-3 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors"
 //               >
-//                 <TbRefresh
-//                   size={18}
-//                   className={`text-gray-500 ${loading ? "animate-spin" : ""}`}
-//                 />
+//                 <TbRefresh size={18} className={`text-gray-500 ${loading ? "animate-spin" : ""}`} />
 //               </button>
 //             </div>
 //           </div>
@@ -911,17 +1034,14 @@
 //               onClick={fetchApplicants}
 //               className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
 //             >
-//               <TbRefresh size={16} />
-//               Try again
+//               <TbRefresh size={16} /> Try again
 //             </button>
 //           </div>
 //         ) : filteredApplicants.length === 0 ? (
 //           <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
 //             <TbUsers size={48} className="mx-auto text-gray-300 mb-3" />
 //             <p className="text-gray-500">No applicants found</p>
-//             <p className="text-sm text-gray-400 mt-1">
-//               Try adjusting your search or filters
-//             </p>
+//             <p className="text-sm text-gray-400 mt-1">Try adjusting your search or filters</p>
 //           </div>
 //         ) : (
 //           <>
@@ -931,29 +1051,22 @@
 //                   key={applicant.application_id || applicant.candidate_id}
 //                   applicant={applicant}
 //                   onCardClick={handleCardClick}
-//                   onToggleFavourite={handleToggleFavourite}
+//                   onToggleFavourite={() => {}}
 //                   onOpenResume={handleOpenResume}
+//                   onCommentClick={handleCommentClick}
 //                 />
 //               ))}
 //             </div>
 
-//             {/* Pagination */}
 //             {totalPages > 1 && (
 //               <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white rounded-xl border border-gray-200 px-4 py-3 shadow-sm">
 //                 <div className="text-sm text-gray-500">
 //                   Showing{" "}
-//                   <span className="font-medium text-gray-700">
-//                     {startIndex + 1}
-//                   </span>{" "}
-//                   to{" "}
+//                   <span className="font-medium text-gray-700">{startIndex + 1}</span> to{" "}
 //                   <span className="font-medium text-gray-700">
 //                     {Math.min(endIndex, totalItems)}
 //                   </span>{" "}
-//                   of{" "}
-//                   <span className="font-medium text-gray-700">
-//                     {totalItems}
-//                   </span>{" "}
-//                   applicants
+//                   of <span className="font-medium text-gray-700">{totalItems}</span> applicants
 //                 </div>
 //                 <div className="flex items-center gap-1">
 //                   <button
@@ -993,6 +1106,56 @@
 //           </>
 //         )}
 //       </div>
+
+//       {/* Comment Modal */}
+//       {showCommentModal && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+//           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 relative animate-in fade-in zoom-in duration-200">
+//             <button
+//               onClick={handleCommentClose}
+//               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+//               disabled={commentLoading}
+//             >
+//               <TbX size={22} />
+//             </button>
+//             <h3 className="text-xl font-semibold text-gray-900 mb-1">Add Comment</h3>
+//             <p className="text-sm text-gray-500 mb-4">{selectedApplicant?.full_name}</p>
+
+//             <textarea
+//               value={commentText}
+//               onChange={(e) => setCommentText(e.target.value)}
+//               placeholder="Write your comment here..."
+//               rows={4}
+//               className="w-full p-3 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 text-sm"
+//               disabled={commentLoading}
+//             />
+
+//             <div className="flex justify-end gap-3 mt-4">
+//               <button
+//                 onClick={handleCommentClose}
+//                 className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+//                 disabled={commentLoading}
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 onClick={handleCommentSubmit}
+//                 disabled={commentLoading || !commentText.trim()}
+//                 className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+//               >
+//                 {commentLoading ? (
+//                   <>
+//                     <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+//                     Posting...
+//                   </>
+//                 ) : (
+//                   "Post Comment"
+//                 )}
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
 //     </div>
 //   );
 // }
@@ -1038,45 +1201,86 @@ import {
 import { useToast } from "../../context/ToastContext";
 import { useAuth } from "../../context/AuthContext";
 
-// ---------------------------------------------------------------------------
-// API Service
-// ---------------------------------------------------------------------------
 const API_BASE_URL = "https://hire-me-jobs.onrender.com";
+const VIEWED_STATUS_ID = 3;
 
 const applicantsApiService = {
   getApplicantsByJobId: async (jobId) => {
     const response = await fetch(
       `${API_BASE_URL}/candidate-profile-job-application?job_id=${jobId}`
     );
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     return response.json();
   },
+
   getCandidateFullProfile: async (candidateId) => {
     const response = await fetch(
       `${API_BASE_URL}/candidate-full-profile/${candidateId}`
     );
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     return response.json();
   },
+
   logResumeDownload: async (data) => {
     const response = await fetch(`${API_BASE_URL}/resume-download-logs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+
+  updateApplicationStatus: async (applicationId, statusId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/candidate-profile-job-application/${applicationId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ application_statuses_id: statusId }),
+      }
+    );
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+
+  postApplicationNote: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/application-notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      let errorMsg = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.message) errorMsg = errorData.message;
+      } catch (e) {}
+      throw new Error(errorMsg);
     }
+    return response.json();
+  },
+
+  getJobApplicationsByJobId: async (jobId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/job-applications?job_id=${jobId}`
+    );
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+
+  // ✅ Direct fetch for a specific candidate
+  getJobApplicationByCandidate: async (jobId, candidateId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/job-applications?job_id=${jobId}&candidate_id=${candidateId}`
+    );
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     return response.json();
   },
 };
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helpers (unchanged)
 // ---------------------------------------------------------------------------
 const asName = (val, fallback = "N/A") => {
   if (!val) return fallback;
@@ -1105,8 +1309,7 @@ const formatDate = (dateString, withTime = false) => {
 const initials = (first, last) => {
   const a = (first || "").trim().charAt(0);
   const b = (last || "").trim().charAt(0);
-  const combined = `${a}${b}`.toUpperCase();
-  return combined || "?";
+  return `${a}${b}`.toUpperCase() || "?";
 };
 
 const formatMonthYear = (dateString) => {
@@ -1136,20 +1339,18 @@ const formatSalaryLac = (amount) => {
   const num = Number(amount);
   if (!num || isNaN(num)) return null;
   const lac = num / 100000;
-  const formatted = lac % 1 === 0 ? lac.toFixed(0) : lac.toFixed(1);
-  return `₹ ${formatted} Lac`;
+  return `₹ ${lac % 1 === 0 ? lac.toFixed(0) : lac.toFixed(1)} Lac`;
 };
 
 const isRecentlyApplied = (dateString, days = 3) => {
   if (!dateString) return false;
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return false;
-  const diffDays = (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24);
-  return diffDays <= days;
+  return (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24) <= days;
 };
 
 // ---------------------------------------------------------------------------
-// Reusable bits
+// Reusable bits (unchanged)
 // ---------------------------------------------------------------------------
 const StatusBadge = ({ status }) => {
   const normalized = (status || "").toLowerCase();
@@ -1159,6 +1360,7 @@ const StatusBadge = ({ status }) => {
     pending: "bg-yellow-50 text-yellow-700 border-yellow-200",
     shortlisted: "bg-blue-50 text-blue-700 border-blue-200",
     rejected: "bg-red-50 text-red-700 border-red-200",
+    viewed: "bg-purple-50 text-purple-700 border-purple-200",
   };
   const cls = colors[normalized] || "bg-gray-50 text-gray-700 border-gray-200";
   return (
@@ -1167,25 +1369,6 @@ const StatusBadge = ({ status }) => {
     </span>
   );
 };
-
-const SectionCard = ({ icon: Icon, title, count, children }) => (
-  <div className="bg-white rounded-xl border border-gray-200 p-5">
-    <div className="flex items-center gap-2 mb-4">
-      <div className="p-1.5 bg-purple-50 rounded-lg">
-        <Icon className="text-purple-600" size={18} />
-      </div>
-      <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-      {typeof count === "number" && (
-        <span className="text-xs text-gray-400">({count})</span>
-      )}
-    </div>
-    {children}
-  </div>
-);
-
-const EmptyRow = ({ label }) => (
-  <p className="text-sm text-gray-400 italic">No {label} added yet</p>
-);
 
 const HighlightedText = ({ text, terms = [] }) => {
   if (!text) return null;
@@ -1220,7 +1403,7 @@ const SkillChip = ({ label, highlighted }) => (
 );
 
 // ---------------------------------------------------------------------------
-// Candidate Card
+// CandidateCard Component (unchanged)
 // ---------------------------------------------------------------------------
 const CandidateCard = ({
   applicant,
@@ -1228,6 +1411,7 @@ const CandidateCard = ({
   onToggleFavourite,
   jobSkillTerms,
   onOpenResume,
+  onCommentClick,
 }) => {
   const [favourite, setFavourite] = useState(!!applicant.is_favourite);
   const [resumeLoading, setResumeLoading] = useState(false);
@@ -1254,7 +1438,6 @@ const CandidateCard = ({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-purple-200 transition-all w-full overflow-hidden">
-      {/* Top meta bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5 bg-gray-50 border-b border-gray-100 text-xs text-gray-500">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1">
@@ -1284,12 +1467,10 @@ const CandidateCard = ({
         </div>
       </div>
 
-      {/* Main body */}
       <div
         className="flex flex-col lg:flex-row gap-5 p-5 cursor-pointer"
         onClick={() => onCardClick(applicant)}
       >
-        {/* Left: candidate details */}
         <div className="flex-1 min-w-0 flex gap-4">
           <div
             className="shrink-0 w-14 h-14 rounded-full bg-purple-100 text-purple-700 font-semibold text-lg flex items-center justify-center overflow-hidden"
@@ -1430,7 +1611,10 @@ const CandidateCard = ({
               className="mt-3 flex items-center gap-4 text-xs text-gray-500"
               onClick={stopPropagation}
             >
-              <button className="flex items-center gap-1 hover:text-gray-700">
+              <button
+                className="flex items-center gap-1 hover:text-gray-700"
+                onClick={() => onCommentClick(applicant)}
+              >
                 <TbMessage size={14} /> Comment
               </button>
               <button className="flex items-center gap-1 hover:text-gray-700">
@@ -1449,7 +1633,6 @@ const CandidateCard = ({
           </div>
         </div>
 
-        {/* Right panel */}
         <div className="w-full lg:w-72 shrink-0 lg:border-l lg:border-gray-100 lg:pl-5 flex flex-col gap-3">
           <div className="flex items-center gap-2" onClick={stopPropagation}>
             {applicant.linkedin_url && (
@@ -1467,7 +1650,9 @@ const CandidateCard = ({
 
           {applicant.summary && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 mb-1">Summary:</p>
+              <p className="text-xs font-semibold text-gray-500 mb-1">
+                Summary:
+              </p>
               <p className="text-xs text-gray-600 leading-relaxed line-clamp-4">
                 <HighlightedText text={applicant.summary} terms={jobSkillTerms} />
               </p>
@@ -1483,7 +1668,10 @@ const CandidateCard = ({
             </div>
           )}
 
-          <div className="mt-auto pt-2 border-t border-gray-100 space-y-2" onClick={stopPropagation}>
+          <div
+            className="mt-auto pt-2 border-t border-gray-100 space-y-2"
+            onClick={stopPropagation}
+          >
             {applicant.mobile && (
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-sm text-gray-700">
@@ -1537,34 +1725,41 @@ export default function JobApplicants() {
   const [filterStatus, setFilterStatus] = useState("all");
 
   const [companyId, setCompanyId] = useState(null);
-  const [fetchingCompany, setFetchingCompany] = useState(false);
+  const [companyUserId, setCompanyUserId] = useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6);
 
-  // ─── Fetch company ID ──────────────────────────────────────────
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [selectedApplicant, setSelectedApplicant] = useState(null);
+  const [commentText, setCommentText] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
+
+  // ─── Fetch company user ID ──────────────────────────────────
   useEffect(() => {
-    const fetchCompanyId = async () => {
-      if (!user?.id) return;
-      setFetchingCompany(true);
+    const fetchCompanyUser = async () => {
+      if (!user?.email) return;
       try {
-        const res = await fetch(`${API_BASE_URL}/companies`);
-        if (!res.ok) throw new Error("Failed to fetch companies");
-        const data = await res.json();
-        const companies = data.data || data.results || data || [];
-        const found = companies.find(
-          (c) => c.CompanyUser?.company_user_id === user.id
-        );
-        if (found) {
-          setCompanyId(found.id);
+        const cuRes = await fetch(`${API_BASE_URL}/company-users`);
+        if (cuRes.ok) {
+          const cuData = await cuRes.json();
+          const cuList = cuData.data || cuData || [];
+          const cu = cuList.find(
+            (u) =>
+              u.email?.toLowerCase() === user.email?.toLowerCase() ||
+              u.id === user.id
+          );
+          if (cu) setCompanyUserId(cu.id);
+          else setCompanyUserId(user.id);
+        } else {
+          setCompanyUserId(user.id);
         }
       } catch (error) {
-        console.error("Error fetching company ID:", error);
-      } finally {
-        setFetchingCompany(false);
+        console.error("Error fetching company user:", error);
+        setCompanyUserId(user.id);
       }
     };
-    fetchCompanyId();
+    fetchCompanyUser();
   }, [user]);
 
   // ─── Fetch applicants ──────────────────────────────────────────
@@ -1582,20 +1777,30 @@ export default function JobApplicants() {
     setLoadError(null);
     try {
       const result = await applicantsApiService.getApplicantsByJobId(jobId);
-
       let rawList = [];
-      if (Array.isArray(result)) {
-        rawList = result;
-      } else if (Array.isArray(result?.data)) {
-        rawList = result.data;
-      } else if (Array.isArray(result?.data?.applications)) {
-        rawList = result.data.applications;
-      } else if (Array.isArray(result?.applications)) {
-        rawList = result.applications;
-      } else if (Array.isArray(result?.data?.candidates)) {
-        rawList = result.data.candidates;
+      if (Array.isArray(result)) rawList = result;
+      else if (Array.isArray(result?.data)) rawList = result.data;
+      else if (Array.isArray(result?.data?.applications)) rawList = result.data.applications;
+      else if (Array.isArray(result?.applications)) rawList = result.applications;
+      else if (Array.isArray(result?.data?.candidates)) rawList = result.data.candidates;
+
+      // Build map from job-applications
+      let jobAppsMap = {};
+      try {
+        const jobAppsResult = await applicantsApiService.getJobApplicationsByJobId(jobId);
+        const jobApps = jobAppsResult?.data || jobAppsResult || [];
+        jobAppsMap = jobApps.reduce((acc, app) => {
+          const candidateId = app.candidate_id || app.candidateId || app.Candidate?.id;
+          if (candidateId && app.id) {
+            acc[candidateId] = app.id;
+          }
+          return acc;
+        }, {});
+      } catch (err) {
+        console.warn("Could not fetch job applications, falling back.", err);
       }
 
+      // Transform
       const transformed = rawList.map((item) => {
         const c =
           item.candidate ||
@@ -1612,25 +1817,23 @@ export default function JobApplicants() {
           c.candidateId ??
           (c !== item ? c.id : undefined);
 
+        let jobAppId = jobAppsMap[candidateId];
+        if (!jobAppId) jobAppId = item.job_application_id || item.job_applicationId || null;
+
         const rawSkills = asList(c.candidate_skills || item.candidate_skills);
         const skillNames = rawSkills
-          .map((s) =>
-            typeof s === "string" ? s : asName(s.skill, s.skill_name || s.name)
-          )
+          .map((s) => (typeof s === "string" ? s : asName(s.skill, s.skill_name || s.name)))
           .filter((s) => s && s !== "N/A");
 
         const experienceList = asList(c.candidate_experience || item.candidate_experience);
-        const currentExp =
-          experienceList.find((e) => e.is_current_company) || experienceList[0];
+        const currentExp = experienceList.find((e) => e.is_current_company) || experienceList[0];
         const currentRole = currentExp
           ? {
               designation: currentExp.designation || currentExp.job_title || "N/A",
               company: currentExp.company_name || "",
               duration_label: currentExp.start_date
                 ? `${formatMonthYear(currentExp.start_date)} to ${
-                    currentExp.is_current_company
-                      ? "Present"
-                      : formatMonthYear(currentExp.end_date)
+                    currentExp.is_current_company ? "Present" : formatMonthYear(currentExp.end_date)
                   } - ${durationFromDates(currentExp.start_date, currentExp.end_date)}`
                 : "",
             }
@@ -1639,9 +1842,7 @@ export default function JobApplicants() {
         const totalExperience =
           c.total_experience_label ||
           c.experience_label ||
-          (currentExp?.start_date
-            ? durationFromDates(currentExp.start_date, currentExp.end_date)
-            : "");
+          (currentExp?.start_date ? durationFromDates(currentExp.start_date, currentExp.end_date) : "");
 
         const preferences = c.candidate_preferences || item.candidate_preferences;
         const expectedSalaryLabel = formatSalaryLac(
@@ -1669,11 +1870,11 @@ export default function JobApplicants() {
 
         return {
           application_id: item.id || item.application_id,
+          job_application_id: jobAppId, // internal use
           candidate_id: candidateId,
           first_name: c.first_name || "",
           last_name: c.last_name || "",
-          full_name:
-            `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Unnamed candidate",
+          full_name: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Unnamed candidate",
           email: c.email || "N/A",
           mobile: c.mobile || "",
           mobile_verified: !!(c.mobile_verified || c.is_mobile_verified),
@@ -1681,9 +1882,7 @@ export default function JobApplicants() {
           status: item.status || c.status || "pending",
           applied_at: item.applied_at || item.created_at || item.createdAt,
           updated_at: item.updated_at || item.updatedAt,
-          is_newly_added: isRecentlyApplied(
-            item.applied_at || item.created_at || item.createdAt
-          ),
+          is_newly_added: isRecentlyApplied(item.applied_at || item.created_at || item.createdAt),
           is_favourite: !!item.is_favourite,
           skills: skillNames,
           current_role: currentRole,
@@ -1714,27 +1913,38 @@ export default function JobApplicants() {
     }
   };
 
-  const handleCardClick = (applicant) => {
-    if (applicant.candidate_id) {
-      navigate(`/jobs/${jobId}/applicants/${applicant.candidate_id}`);
-    } else {
+  // ─── Handle card click ──────────────────────────────────────────
+  const handleCardClick = async (applicant) => {
+    if (!applicant.candidate_id) {
       showError("Candidate ID missing");
+      return;
     }
+    if (applicant.application_id) {
+      try {
+        await applicantsApiService.updateApplicationStatus(applicant.application_id, VIEWED_STATUS_ID);
+        setApplicants((prev) =>
+          prev.map((a) =>
+            a.application_id === applicant.application_id ? { ...a, status: "viewed" } : a
+          )
+        );
+        showSuccess("Application marked as Viewed");
+      } catch (error) {
+        console.error("Failed to update application status:", error);
+      }
+    }
+    navigate(`/jobs/${jobId}/applicants/${applicant.candidate_id}`);
   };
 
-  const handleToggleFavourite = (applicant) => {};
-
-  // ─── Resume opener with download log ──────────────────────────
+  // ─── Resume opener ──────────────────────────────────────────
   const handleOpenResume = async (candidateId) => {
     try {
       const result = await applicantsApiService.getCandidateFullProfile(candidateId);
       const data = result?.data || result;
       const resume = data?.candidate_resumes;
       if (!resume || !resume.resume_file) {
-        showError("No resume available for this candidate");
+        showError("No resume available");
         return;
       }
-
       const resumeId = resume.id;
       if (!resumeId) {
         showError("Resume ID not found");
@@ -1747,40 +1957,23 @@ export default function JobApplicants() {
         if (res.ok) {
           const data2 = await res.json();
           const companies = data2.data || data2.results || data2 || [];
-          const found = companies.find(
-            (c) => c.CompanyUser?.company_user_id === user.id
-          );
-          if (found) {
-            cid = found.id;
-            setCompanyId(cid);
-          }
+          const found = companies.find((c) => c.CompanyUser?.company_user_id === user.id);
+          if (found) cid = found.id;
         }
       }
-
       if (!cid) {
-        showError("Company ID not found. Please ensure you are associated with a company.");
+        showError("Company ID not found.");
         return;
       }
 
-      // ─── Payload with created_by & updated_by ──────────────────
       const userId = user?.id || null;
-      const logPayload = {
+      await applicantsApiService.logResumeDownload({
         candidate_resume_id: resumeId,
         company_id: cid,
         downloaded_by: userId,
-        created_by: userId,   // <-- added
-        updated_by: userId,   // <-- added
-      };
-
-      console.log("📤 Logging resume download:", logPayload);
-
-      try {
-        await applicantsApiService.logResumeDownload(logPayload);
-        showSuccess("Resume download logged");
-      } catch (logErr) {
-        console.error("Failed to log resume download:", logErr);
-      }
-
+        created_by: userId,
+        updated_by: userId,
+      });
       const resumeUrl = resume.resume_file.startsWith("http")
         ? resume.resume_file
         : `${API_BASE_URL}${resume.resume_file}`;
@@ -1791,6 +1984,88 @@ export default function JobApplicants() {
     }
   };
 
+  // ─── Comment handlers ──────────────────────────────────────────
+  const handleCommentClick = (applicant) => {
+    setSelectedApplicant(applicant);
+    setCommentText("");
+    setShowCommentModal(true);
+  };
+
+  const handleCommentClose = () => {
+    setShowCommentModal(false);
+    setSelectedApplicant(null);
+    setCommentText("");
+  };
+
+  // ✅ Always fetch fresh job_application_id from server
+  const getValidJobApplicationId = async (candidateId) => {
+    try {
+      const result = await applicantsApiService.getJobApplicationByCandidate(jobId, candidateId);
+      const apps = result?.data || result || [];
+      if (apps.length > 0) {
+        return apps[0].id;
+      }
+      const fullResult = await applicantsApiService.getJobApplicationsByJobId(jobId);
+      const allApps = fullResult?.data || fullResult || [];
+      const found = allApps.find(
+        (app) =>
+          app.candidate_id === candidateId ||
+          app.Candidate?.id === candidateId ||
+          app.candidateId === candidateId
+      );
+      return found?.id || null;
+    } catch (err) {
+      console.error("Error fetching job application ID:", err);
+      return null;
+    }
+  };
+
+  const handleCommentSubmit = async () => {
+    if (!selectedApplicant) return;
+    if (!commentText.trim()) {
+      showError("Please enter a comment");
+      return;
+    }
+
+    // 🔥 Always fetch fresh application ID (from job-applications table)
+    const appId = await getValidJobApplicationId(selectedApplicant.candidate_id);
+    if (!appId) {
+      showError("Could not find application for this candidate.");
+      return;
+    }
+
+    let creatorId = companyUserId || user?.id;
+    if (!creatorId) {
+      showError("User not authenticated.");
+      return;
+    }
+
+    setCommentLoading(true);
+    try {
+      const payload = {
+        note: commentText.trim(),
+        is_status: true,
+        is_trending: false,
+        created_by: creatorId,
+        updated_by: creatorId,
+        application_id: appId,   // ✅ Changed from job_application_id to application_id
+        company_user_id: creatorId,
+      };
+
+      console.log("📤 Final Comment Payload:", payload);
+
+      await applicantsApiService.postApplicationNote(payload);
+      showSuccess("Comment added successfully");
+      handleCommentClose();
+    } catch (error) {
+      console.error("Error posting comment:", error);
+      showError(`Failed to add comment: ${error.message}`);
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  // ─── Filtering & Pagination ────────────────────────────────────
   const filteredApplicants = useMemo(() => {
     return applicants.filter((a) => {
       const matchesSearch =
@@ -1825,8 +2100,7 @@ export default function JobApplicants() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Applicants</h1>
               <p className="text-sm text-gray-500 mt-0.5">
-                Job #{jobId} · {totalItems}{" "}
-                {totalItems === 1 ? "applicant" : "applicants"}
+                Job #{jobId} · {totalItems} {totalItems === 1 ? "applicant" : "applicants"}
               </p>
             </div>
           </div>
@@ -1858,15 +2132,13 @@ export default function JobApplicants() {
                 <option value="pending">Pending</option>
                 <option value="shortlisted">Shortlisted</option>
                 <option value="rejected">Rejected</option>
+                <option value="viewed">Viewed</option>
               </select>
               <button
                 onClick={fetchApplicants}
                 className="px-3 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors"
               >
-                <TbRefresh
-                  size={18}
-                  className={`text-gray-500 ${loading ? "animate-spin" : ""}`}
-                />
+                <TbRefresh size={18} className={`text-gray-500 ${loading ? "animate-spin" : ""}`} />
               </button>
             </div>
           </div>
@@ -1886,17 +2158,14 @@ export default function JobApplicants() {
               onClick={fetchApplicants}
               className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
             >
-              <TbRefresh size={16} />
-              Try again
+              <TbRefresh size={16} /> Try again
             </button>
           </div>
         ) : filteredApplicants.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
             <TbUsers size={48} className="mx-auto text-gray-300 mb-3" />
             <p className="text-gray-500">No applicants found</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Try adjusting your search or filters
-            </p>
+            <p className="text-sm text-gray-400 mt-1">Try adjusting your search or filters</p>
           </div>
         ) : (
           <>
@@ -1906,8 +2175,9 @@ export default function JobApplicants() {
                   key={applicant.application_id || applicant.candidate_id}
                   applicant={applicant}
                   onCardClick={handleCardClick}
-                  onToggleFavourite={handleToggleFavourite}
+                  onToggleFavourite={() => {}}
                   onOpenResume={handleOpenResume}
+                  onCommentClick={handleCommentClick}
                 />
               ))}
             </div>
@@ -1916,18 +2186,11 @@ export default function JobApplicants() {
               <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white rounded-xl border border-gray-200 px-4 py-3 shadow-sm">
                 <div className="text-sm text-gray-500">
                   Showing{" "}
-                  <span className="font-medium text-gray-700">
-                    {startIndex + 1}
-                  </span>{" "}
-                  to{" "}
+                  <span className="font-medium text-gray-700">{startIndex + 1}</span> to{" "}
                   <span className="font-medium text-gray-700">
                     {Math.min(endIndex, totalItems)}
                   </span>{" "}
-                  of{" "}
-                  <span className="font-medium text-gray-700">
-                    {totalItems}
-                  </span>{" "}
-                  applicants
+                  of <span className="font-medium text-gray-700">{totalItems}</span> applicants
                 </div>
                 <div className="flex items-center gap-1">
                   <button
@@ -1967,6 +2230,56 @@ export default function JobApplicants() {
           </>
         )}
       </div>
+
+      {/* Comment Modal */}
+      {showCommentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 relative animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={handleCommentClose}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              disabled={commentLoading}
+            >
+              <TbX size={22} />
+            </button>
+            <h3 className="text-xl font-semibold text-gray-900 mb-1">Add Comment</h3>
+            <p className="text-sm text-gray-500 mb-4">{selectedApplicant?.full_name}</p>
+
+            <textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Write your comment here..."
+              rows={4}
+              className="w-full p-3 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 text-sm"
+              disabled={commentLoading}
+            />
+
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={handleCommentClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={commentLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCommentSubmit}
+                disabled={commentLoading || !commentText.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {commentLoading ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Posting...
+                  </>
+                ) : (
+                  "Post Comment"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
