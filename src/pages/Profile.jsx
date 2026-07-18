@@ -43,6 +43,7 @@ import { useToast } from "../context/ToastContext";
 import { Card } from "../components/ui/Card";
 import Avatar from "../components/ui/Avatar";
 import Button from "../components/ui/Button";
+import { buildApiUrl } from "../config/api";
 
 export default function Profile() {
   const { user, token, updateUser, logout } = useAuth();
@@ -102,7 +103,11 @@ export default function Profile() {
     if (!showUserPanel) {
       getLocalStorageUser();
       setPanelView("details");
-      setResetForm({ old_password: "", new_password: "", confirm_password: "" });
+      setResetForm({
+        old_password: "",
+        new_password: "",
+        confirm_password: "",
+      });
       setResetError("");
       setResetSuccess("");
     }
@@ -114,7 +119,11 @@ export default function Profile() {
     // Reset panel back to details view after the close animation
     setTimeout(() => {
       setPanelView("details");
-      setResetForm({ old_password: "", new_password: "", confirm_password: "" });
+      setResetForm({
+        old_password: "",
+        new_password: "",
+        confirm_password: "",
+      });
       setResetError("");
       setResetSuccess("");
     }, 300);
@@ -185,24 +194,18 @@ export default function Profile() {
         setLoading(true);
 
         // 1. Fetch company user details (profile)
-        const userRes = await fetch(
-          `https://hire-me-jobs.onrender.com/company-users/${user.id}`,
-          {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          },
-        );
+        const userRes = await fetch(buildApiUrl(`/company-users/${user.id}`), {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         if (!userRes.ok) throw new Error("Failed to fetch user details");
         const userData = await userRes.json();
         const userDetails = userData.data || userData;
         setCompanyUser(userDetails);
 
         // 2. Fetch all companies and find the one linked to this user
-        const companiesRes = await fetch(
-          "https://hire-me-jobs.onrender.com/companies",
-          {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          },
-        );
+        const companiesRes = await fetch(buildApiUrl("/companies"), {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         if (!companiesRes.ok) throw new Error("Failed to fetch companies");
         const companiesData = await companiesRes.json();
         const companies = companiesData.data || companiesData;
@@ -308,21 +311,18 @@ export default function Profile() {
     try {
       setResetLoading(true);
 
-      const res = await fetch(
-        "https://hire-me-jobs.onrender.com/company-users/change-password",
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${storedToken}`,
-          },
-          body: JSON.stringify({
-            old_password,
-            new_password,
-            confirm_password,
-          }),
+      const res = await fetch(buildApiUrl("/company-users/change-password"), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${storedToken}`,
         },
-      );
+        body: JSON.stringify({
+          old_password,
+          new_password,
+          confirm_password,
+        }),
+      });
 
       let data = {};
       try {
@@ -340,7 +340,11 @@ export default function Profile() {
       const successMsg = data?.message || "Password changed successfully!";
       setResetSuccess(successMsg);
       showSuccess(successMsg);
-      setResetForm({ old_password: "", new_password: "", confirm_password: "" });
+      setResetForm({
+        old_password: "",
+        new_password: "",
+        confirm_password: "",
+      });
 
       // Return to details view shortly after success
       setTimeout(() => {
@@ -803,7 +807,8 @@ export default function Profile() {
                   </button>
                 </div>
                 <p className="text-[11px] text-gray-400">
-                  Must be at least 6 characters, different from current password.
+                  Must be at least 6 characters, different from current
+                  password.
                 </p>
               </div>
 

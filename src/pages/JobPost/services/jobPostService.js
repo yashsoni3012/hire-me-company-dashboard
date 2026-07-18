@@ -3,7 +3,9 @@
    All network access for the Job Post form lives here.
    ==================================================================== */
 
-export const BASE_URL = "https://hire-me-jobs.onrender.com";
+import { API_BASE_URL } from "../../../config/api";
+
+export const BASE_URL = API_BASE_URL;
 export const JOB_POST_URL = `${BASE_URL}/job-post`;
 
 /* ---------------------------------------------------------------------
@@ -11,7 +13,7 @@ export const JOB_POST_URL = `${BASE_URL}/job-post`;
    -------------------------------------------------------------------*/
 
 
-   
+
 export const LOOKUP_CONFIG = {
   jobTypes: {
     url: "/job-types",
@@ -59,7 +61,7 @@ export const LOOKUP_CONFIG = {
     nameKey: "name",
     parentIdKey: "education_id",
     fallback: [
-      { id: 6, name: "BCA MERN 1", education_id: 22 }, 
+      { id: 6, name: "BCA MERN 1", education_id: 22 },
       { id: 14, name: "question12", education_id: 21 }
     ],
   },
@@ -72,7 +74,7 @@ export const LOOKUP_CONFIG = {
     url: "/sub-industry",
     nameKey: "name",
     fallback: [
-      { id: 43, name: "new industry", industry_id: 128 }, 
+      { id: 43, name: "new industry", industry_id: 128 },
       { id: 44, name: "rest api", industry_id: 132 }
     ],
   },
@@ -106,35 +108,35 @@ function autoDetectParentId(item) {
   if (item.Industry && typeof item.Industry === "object" && item.Industry.id) {
     return item.Industry.id;
   }
-  
+
   // Check for nested perks_benefits_category object (for perks)
   if (item.perks_benefits_category && typeof item.perks_benefits_category === "object" && item.perks_benefits_category.id) {
     return item.perks_benefits_category.id;
   }
-  
+
   // Check all possible parent ID field names
   const candidates = [
-    "category_id", 
-    "industry_id", 
-    "education_id", 
+    "category_id",
+    "industry_id",
+    "education_id",
     "education_category_id",
-    "perk_category_id", 
-    "perk_benefit_category_id", 
+    "perk_category_id",
+    "perk_benefit_category_id",
     "parent_id",
-    "sub_category_id", 
-    "categoryId", 
-    "industryId", 
+    "sub_category_id",
+    "categoryId",
+    "industryId",
     "parentId",
     "category",
     "industry"
   ];
-  
+
   for (const field of candidates) {
     if (item[field] !== undefined && item[field] !== null && item[field] !== 0) {
       return item[field];
     }
   }
-  
+
   return null;
 }
 
@@ -146,7 +148,7 @@ function resolveParentId(item, config) {
       return configured;
     }
   }
-  
+
   // Fall back to auto-detection
   return autoDetectParentId(item);
 }
@@ -169,7 +171,7 @@ function normalizeOption(item, config = {}) {
   if (id == null || name == null) return null;
 
   const parentId = resolveParentId(item, config);
-  
+
   return {
     id: Number(id),
     name: String(name),
@@ -190,9 +192,9 @@ async function fetchAndNormalize(path, config) {
   else if (json.data && Array.isArray(json.data?.data)) raw = json.data.data;
   else if (json.data && typeof json.data === "object") {
     for (const key of Object.keys(json.data)) {
-      if (Array.isArray(json.data[key])) { 
-        raw = json.data[key]; 
-        break; 
+      if (Array.isArray(json.data[key])) {
+        raw = json.data[key];
+        break;
       }
     }
   }
@@ -256,17 +258,17 @@ function generateUniqueTitle(baseTitle) {
 
 export async function postJob(payload) {
   const finalPayload = { ...payload };
-  
+
   // Make sure we have a job title - make it unique if not provided
   let jobTitle = finalPayload.job_title || finalPayload.title || finalPayload.jobTitle;
-  
+
   if (!jobTitle || jobTitle.trim() === '') {
     jobTitle = `Job Post - ${new Date().toISOString()}`;
   }
-  
+
   // Add timestamp to make title unique for each post
   const uniqueTitle = generateUniqueTitle(jobTitle);
-  
+
   if (!finalPayload.job_type_id || isNaN(finalPayload.job_type_id)) {
     finalPayload.job_type_id = 11;
   }
@@ -339,7 +341,7 @@ export async function postJob(payload) {
       }
       throw new Error(errorMessage);
     }
-    
+
     console.log("✅ Job posted successfully:", data);
     return data;
   } catch (error) {
@@ -355,14 +357,14 @@ export async function postJob(payload) {
 export async function postJobs(payloads) {
   const succeeded = [];
   const failed = [];
-  
+
   for (let i = 0; i < payloads.length; i++) {
     try {
       const payload = payloads[i];
       // Ensure each job has a unique title
       const data = await postJob(payload);
       succeeded.push({ payload, data });
-      
+
       // Add a small delay between posts to avoid rate limiting
       if (i < payloads.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -371,6 +373,6 @@ export async function postJobs(payloads) {
       failed.push({ payload: payloads[i], error: err.message });
     }
   }
-  
+
   return { succeeded, failed };
 }

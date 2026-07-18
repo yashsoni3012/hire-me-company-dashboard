@@ -176,8 +176,7 @@ import {
 } from "react-icons/tb";
 import { useToast } from "../../context/ToastContext";
 import { useAuth } from "../../context/AuthContext";
-
-const API_BASE_URL = "https://hire-me-jobs.onrender.com";
+import { API_BASE_URL } from "../../config/api";
 
 export default function CommentSection() {
   const { jobId, applicationId } = useParams();
@@ -202,7 +201,7 @@ export default function CommentSection() {
     setFetching(true);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/application-notes?job_application_id=${applicationId}`
+        `${API_BASE_URL}/application-notes?job_application_id=${applicationId}`,
       );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

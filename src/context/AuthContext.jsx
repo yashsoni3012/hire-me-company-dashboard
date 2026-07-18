@@ -336,16 +336,17 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useToast } from "./ToastContext";
 import { useNavigate } from "react-router-dom";
- 
+import { buildApiUrl } from "../config/api";
+
 const AuthContext = createContext();
- 
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(null);
   const { showSuccess, showError } = useToast();
- 
+
   // On mount, restore session from localStorage
   useEffect(() => {
     const savedToken = localStorage.getItem("token");
@@ -364,42 +365,39 @@ export function AuthProvider({ children }) {
     }
     setLoading(false);
   }, []);
- 
+
   // ---------- LOGIN ----------
   const login = async (email, password) => {
     try {
-      const response = await fetch(
-        "https://hire-me-jobs.onrender.com/company-users/login",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        }
-      );
- 
+      const response = await fetch(buildApiUrl("/company-users/login"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
       const data = await response.json();
       console.log("Login API response:", data);
- 
+
       if (!response.ok) {
         // The server may send a message in data.message or data.error
         const errorMsg = data.message || data.error || "Invalid credentials";
         throw new Error(errorMsg);
       }
- 
+
       // Our API wraps token and user inside a `data` object
       const { token: authToken, user: userData } = data.data || {};
- 
+
       if (!authToken || !userData) {
         throw new Error("Incomplete response from server");
       }
- 
+
       // Save to state & localStorage
       setToken(authToken);
       setUser(userData);
       setIsAuthenticated(true);
       localStorage.setItem("token", authToken);
       localStorage.setItem("user", JSON.stringify(userData));
- 
+
       showSuccess(data.message || "Login successful! Welcome back.");
       return { success: true };
     } catch (error) {
@@ -408,7 +406,7 @@ export function AuthProvider({ children }) {
       return { success: false, error: error.message };
     }
   };
- 
+
   // ---------- REGISTER (SIGN UP) ----------
   const register = async (email, password, mobile) => {
     try {
@@ -418,24 +416,21 @@ export function AuthProvider({ children }) {
         mobile,
         login_type: "email",
       };
- 
-      const response = await fetch(
-        "https://hire-me-jobs.onrender.com/company-users/",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
- 
+
+      const response = await fetch(buildApiUrl("/company-users/"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
       const data = await response.json();
       console.log("Registration API response:", data);
- 
+
       if (!response.ok) {
         const errorMsg = data.message || data.error || "Registration failed";
         throw new Error(errorMsg);
       }
- 
+
       // If registration returns a similar structure, we could auto-login,
       // but we'll just show success and let user switch to login.
       showSuccess(data.message || "Account created! You can now log in.");
@@ -446,7 +441,7 @@ export function AuthProvider({ children }) {
       return { success: false, error: error.message };
     }
   };
- 
+
   // ---------- LOGOUT ----------
   const logout = () => {
     setUser(null);
@@ -456,7 +451,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("user");
     showSuccess("Logged out successfully");
   };
- 
+
   // ---------- UPDATE USER ----------
   const updateUser = (updatedData) => {
     const newUserData = { ...user, ...updatedData };
@@ -464,7 +459,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem("user", JSON.stringify(newUserData));
     showSuccess("Profile updated successfully!");
   };
- 
+
   // ---------- FORGOT PASSWORD (placeholder) ----------
   const forgotPassword = async (email) => {
     try {
@@ -480,7 +475,7 @@ export function AuthProvider({ children }) {
       return { success: false, error: error.message };
     }
   };
- 
+
   const value = {
     user,
     isAuthenticated,
@@ -492,10 +487,10 @@ export function AuthProvider({ children }) {
     updateUser,
     forgotPassword,
   };
- 
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
- 
+
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
@@ -503,18 +498,18 @@ export function useAuth() {
   }
   return context;
 }
- 
+
 // ---------- PROTECTED ROUTE ----------
 export function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
- 
+
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       navigate("/login");
     }
   }, [isAuthenticated, loading, navigate]);
- 
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -525,6 +520,6 @@ export function ProtectedRoute({ children }) {
       </div>
     );
   }
- 
+
   return isAuthenticated ? children : null;
 }

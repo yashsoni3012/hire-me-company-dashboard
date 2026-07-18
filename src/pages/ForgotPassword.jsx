@@ -11,6 +11,7 @@ import {
   TbCircleCheck,
 } from "react-icons/tb";
 import { useAuth } from "../context/AuthContext";
+import { buildApiUrl } from "../config/api";
 
 export default function ForgotPassword() {
   const { forgotPassword } = useAuth();
@@ -56,7 +57,9 @@ export default function ForgotPassword() {
       if (result?.success) {
         setStep("otp");
       } else {
-        setEmailError(result?.message || "Failed to send OTP. Please try again.");
+        setEmailError(
+          result?.message || "Failed to send OTP. Please try again.",
+        );
       }
     } catch (err) {
       console.error("❌ Forgot password error:", err);
@@ -111,21 +114,18 @@ export default function ForgotPassword() {
     try {
       setIsResetting(true);
 
-      const res = await fetch(
-        "https://hire-me-jobs.onrender.com/company-users/forgot-password",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            otp,
-            new_password: newPassword,
-            confirm_password: confirmPassword,
-          }),
+      const res = await fetch(buildApiUrl("/company-users/forgot-password"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          email,
+          otp,
+          new_password: newPassword,
+          confirm_password: confirmPassword,
+        }),
+      });
 
       let data = {};
       try {
@@ -143,9 +143,7 @@ export default function ForgotPassword() {
       setStep("success");
     } catch (err) {
       console.error("❌ Reset password error:", err);
-      setResetError(
-        err.message || "Something went wrong. Please try again.",
-      );
+      setResetError(err.message || "Something went wrong. Please try again.");
     } finally {
       setIsResetting(false);
     }
@@ -339,13 +337,10 @@ export default function ForgotPassword() {
                 >
                   {isResending ? "Resending..." : "Resend OTP"}
                 </button>
-               
               </div>
 
               {resendMsg && (
-                <p className="text-xs text-center text-gray-400">
-                  {resendMsg}
-                </p>
+                <p className="text-xs text-center text-gray-400">{resendMsg}</p>
               )}
 
               {/* Back to Login */}

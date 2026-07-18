@@ -19,9 +19,7 @@ import {
   TbChevronsRight,
 } from "react-icons/tb";
 import { useToast } from "../../context/ToastContext";
-
-// API Service
-const API_BASE_URL = "https://hire-me-jobs.onrender.com";
+import { API_BASE_URL } from "../../config/api";
 
 const jobApiService = {
   getAllJobs: async () => {
