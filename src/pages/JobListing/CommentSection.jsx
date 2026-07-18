@@ -1,452 +1,474 @@
-// // src/pages/JobListing/CommentSection.jsx
-// import React, { useState } from "react";
-// import { useParams, useNavigate } from "react-router-dom";
-// import { TbArrowLeft, TbSend, TbEdit } from "react-icons/tb";
-// import { useToast } from "../../context/ToastContext";
-// import { useAuth } from "../../context/AuthContext";
+// // src/components/CommentSection.jsx
+// import React, { useState, useEffect } from "react";
+// import { TbX } from "react-icons/tb";
 
-// const API_BASE_URL = "https://hire-me-jobs.onrender.com";
+// const CommentSection = ({ isOpen, applicant, onClose, onSubmit, loading }) => {
+//   const [commentText, setCommentText] = useState("");
 
-// export default function CommentSection() {
-//   const { jobId, applicationId } = useParams();
-//   const navigate = useNavigate();
-//   const { showSuccess, showError } = useToast();
-//   const { user } = useAuth();
-
-//   const [note, setNote] = useState("");
-//   const [loading, setLoading] = useState(false);
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-
-//     if (!note.trim()) {
-//       showError("Please enter a note");
-//       return;
+//   // Reset text when modal opens or applicant changes
+//   useEffect(() => {
+//     if (isOpen) {
+//       setCommentText("");
 //     }
+//   }, [isOpen, applicant]);
 
-//     if (!applicationId) {
-//       showError("Application ID is missing");
-//       return;
-//     }
-
-//     const companyUserId = user?.id;
-//     if (!companyUserId) {
-//       showError("You must be logged in to add a note");
-//       return;
-//     }
-
-//     setLoading(true);
-//     try {
-//       const payload = {
-//         note: note.trim(),
-//         job_application_id: Number(applicationId),
-//         company_user_id: Number(companyUserId),
-//       };
-
-//       const response = await fetch(`${API_BASE_URL}/application-notes`, {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify(payload),
-//       });
-
-//       if (!response.ok) {
-//         const errData = await response.json();
-//         throw new Error(errData.message || "Failed to save note");
-//       }
-
-//       showSuccess("Note added successfully");
-//       setNote("");
-//       setTimeout(() => navigate(-1), 1500);
-//     } catch (error) {
-//       console.error("Error saving note:", error);
-//       showError(error.message || "Failed to save note");
-//     } finally {
-//       setLoading(false);
+//   const handleSubmit = () => {
+//     if (commentText.trim()) {
+//       onSubmit(commentText);
 //     }
 //   };
 
+//   if (!isOpen) return null;
+
 //   return (
-//     <div className="min-h-screen bg-gray-50">
-//       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
-//         {/* Back button */}
+//     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+//       <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 relative animate-in fade-in zoom-in duration-200">
 //         <button
-//           onClick={() => navigate(-1)}
-//           className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors mb-4"
+//           onClick={onClose}
+//           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+//           disabled={loading}
 //         >
-//           <TbArrowLeft size={18} />
-//           Back to applicants
+//           <TbX size={22} />
 //         </button>
+//         <h3 className="text-xl font-semibold text-gray-900 mb-1">Add Comment</h3>
+//         <p className="text-sm text-gray-500 mb-4">{applicant?.full_name}</p>
 
-//         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-//           <div className="px-6 py-4 border-b border-gray-200 flex items-center gap-3">
-//             <div className="p-2 bg-purple-50 rounded-lg">
-//               <TbEdit className="text-purple-600" size={20} />
-//             </div>
-//             <div>
-//               <h2 className="text-lg font-bold text-gray-900">Add Note</h2>
-//               <p className="text-sm text-gray-500">
-//                 Write a comment or note about this applicant
-//               </p>
-//             </div>
-//           </div>
+//         <textarea
+//           value={commentText}
+//           onChange={(e) => setCommentText(e.target.value)}
+//           placeholder="Write your comment here..."
+//           rows={4}
+//           className="w-full p-3 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 text-sm"
+//           disabled={loading}
+//         />
 
-//           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-//             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-//                 Your Note
-//               </label>
-//               <textarea
-//                 value={note}
-//                 onChange={(e) => setNote(e.target.value)}
-//                 rows="6"
-//                 placeholder="Write your comment here..."
-//                 className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 resize-none"
-//                 disabled={loading}
-//               />
-//               <p className="mt-1 text-xs text-gray-400">
-//                 {note.length} characters
-//               </p>
-//             </div>
-
-//             <div className="flex gap-3 pt-2">
-//               {/* Cancel button (secondary) */}
-//               <button
-//                 type="button"
-//                 onClick={() => navigate(-1)}
-//                 disabled={loading}
-//                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-//               >
-//                 Cancel
-//               </button>
-
-//               {/* Submit button (primary) */}
-//               <button
-//                 type="submit"
-//                 disabled={!note.trim() || loading}
-//                 className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-//               >
-//                 {loading ? (
-//                   <>
-//                     <svg
-//                       className="animate-spin h-4 w-4 text-white"
-//                       xmlns="http://www.w3.org/2000/svg"
-//                       fill="none"
-//                       viewBox="0 0 24 24"
-//                     >
-//                       <circle
-//                         className="opacity-25"
-//                         cx="12"
-//                         cy="12"
-//                         r="10"
-//                         stroke="currentColor"
-//                         strokeWidth="4"
-//                       />
-//                       <path
-//                         className="opacity-75"
-//                         fill="currentColor"
-//                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-//                       />
-//                     </svg>
-//                     Saving...
-//                   </>
-//                 ) : (
-//                   <>
-//                     <TbSend size={16} />
-//                     Post Note
-//                   </>
-//                 )}
-//               </button>
-//             </div>
-//           </form>
+//         <div className="flex justify-end gap-3 mt-4">
+//           <button
+//             onClick={onClose}
+//             className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+//             disabled={loading}
+//           >
+//             Cancel
+//           </button>
+//           <button
+//             onClick={handleSubmit}
+//             disabled={loading || !commentText.trim()}
+//             className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+//           >
+//             {loading ? (
+//               <>
+//                 <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+//                 Posting...
+//               </>
+//             ) : (
+//               "Post Comment"
+//             )}
+//           </button>
 //         </div>
 //       </div>
 //     </div>
 //   );
-// }
+// };
+
+// export default CommentSection;
 
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import {
-  TbArrowLeft,
-  TbSend,
-  TbEdit,
+  TbX,
   TbMessage,
-  TbCalendar,
   TbUser,
+  TbClock,
+  TbPencil,
+  TbTrash,
+  TbCheck,
+  TbLoader2,
 } from "react-icons/tb";
-import { useToast } from "../../context/ToastContext";
-import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../config/api";
 
-export default function CommentSection() {
-  const { jobId, applicationId } = useParams();
-  const navigate = useNavigate();
-  const { showSuccess, showError } = useToast();
-  const { user } = useAuth();
+const CommentSection = ({
+  isOpen,
+  applicant,
+  applicationId,
+  onClose,
+  onSubmit,
+  loading,
+  currentUserId, // ✅ ID of the logged-in company user
+  userMap = {}, // { company_user_id: email }
+}) => {
+  const [commentText, setCommentText] = useState("");
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState(null);
 
-  const [notes, setNotes] = useState([]);
-  const [newNote, setNewNote] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  // ✅ Edit state
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState("");
+  const [savingEditId, setSavingEditId] = useState(null);
 
-  // ─── Fetch existing notes for this application ──────────────────
-  const fetchNotes = async () => {
-    if (!applicationId) {
-      showError("Application ID is missing");
-      setFetching(false);
-      return;
+  // ✅ Delete state
+  const [deletingId, setDeletingId] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCommentText("");
+      setCommentsError(null);
+      setEditingId(null);
+      setEditValue("");
+      if (applicationId) {
+        fetchComments(applicationId);
+      }
     }
+  }, [isOpen, applicationId]);
 
-    setFetching(true);
+  const fetchComments = async (appId) => {
+    setCommentsLoading(true);
+    setCommentsError(null);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/application-notes?job_application_id=${applicationId}`,
+        `${API_BASE_URL}/application-notes?application_id=${appId}`
       );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const result = await response.json();
-      // The API might return { data: [...] } or directly an array
-      const notesData = result?.data || result || [];
-      setNotes(Array.isArray(notesData) ? notesData : []);
+      const data = result?.data || result || [];
+      setComments(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Error fetching notes:", error);
-      showError("Failed to load notes");
+      console.error("Error fetching comments:", error);
+      setCommentsError("Failed to load comments");
+      setComments([]);
     } finally {
-      setFetching(false);
+      setCommentsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchNotes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applicationId]);
-
-  // ─── Submit new note ────────────────────────────────────────────
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const trimmedNote = newNote.trim();
-    if (!trimmedNote) {
-      showError("Please enter a note");
-      return;
-    }
-
-    if (!applicationId) {
-      showError("Application ID is missing – cannot save note");
-      return;
-    }
-
-    const companyUserId = user?.id;
-    if (!companyUserId) {
-      showError("You must be logged in to add a note");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const payload = {
-        note: trimmedNote,
-        job_application_id: Number(applicationId),
-        company_user_id: Number(companyUserId),
-      };
-
-      const response = await fetch(`${API_BASE_URL}/application-notes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.message || "Failed to save note");
-      }
-
-      const savedNote = await response.json();
-      // Add the new note to the list (optimistic update)
-      setNotes((prev) => [savedNote.data || savedNote, ...prev]);
-      setNewNote("");
-      showSuccess("Note added successfully");
-    } catch (error) {
-      console.error("Error saving note:", error);
-      showError(error.message || "Failed to save note");
-    } finally {
-      setSubmitting(false);
+  const handleSubmit = () => {
+    if (commentText.trim()) {
+      onSubmit(commentText);
+      setCommentText("");
     }
   };
 
-  // ─── Format date (if needed) ────────────────────────────────────
-  const formatNoteDate = (dateString) => {
+  const formatCommentDate = (dateString) => {
     if (!dateString) return "";
     try {
       const date = new Date(dateString);
-      return date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+      return dateString;
     } catch {
       return dateString;
     }
   };
 
-  // ─── Render ──────────────────────────────────────────────────────
+  // ✅ Filter comments to only those from the current user
+  const filteredComments = comments.filter((comment) => {
+    const userId = comment.CompanyUser?.company_user_id || comment.created_by;
+    return userId === currentUserId;
+  });
+
+  // Get user email from map for display (or fallback)
+  const getCommenterName = (comment) => {
+    const userId = comment.CompanyUser?.company_user_id || comment.created_by;
+    return userMap[userId] || `User ${userId}`;
+  };
+
+  // ─── Edit handlers ──────────────────────────────────────────
+  const startEdit = (comment) => {
+    if (deletingId) return;
+    setEditingId(comment.id);
+    setEditValue(comment.note || "");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const saveEdit = async (comment) => {
+    const trimmed = editValue.trim();
+    if (!trimmed || trimmed === comment.note) {
+      cancelEdit();
+      return;
+    }
+
+    setSavingEditId(comment.id);
+    const previousNote = comment.note;
+
+    // optimistic update
+    setComments((prev) =>
+      prev.map((c) => (c.id === comment.id ? { ...c, note: trimmed } : c))
+    );
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/application-notes/${comment.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            note: trimmed,
+            updated_by: currentUserId,
+          }),
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      setEditingId(null);
+      setEditValue("");
+    } catch (error) {
+      console.error("Error updating comment:", error);
+      // rollback
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === comment.id ? { ...c, note: previousNote } : c
+        )
+      );
+    } finally {
+      setSavingEditId(null);
+    }
+  };
+
+  const handleEditKeyDown = (e, comment) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      saveEdit(comment);
+    } else if (e.key === "Escape") {
+      cancelEdit();
+    }
+  };
+
+  // ─── Delete handler ─────────────────────────────────────────
+  const deleteComment = async (comment) => {
+    if (!window.confirm("Delete this comment? This cannot be undone.")) {
+      return;
+    }
+
+    setDeletingId(comment.id);
+    const previousComments = comments;
+
+    // optimistic removal
+    setComments((prev) => prev.filter((c) => c.id !== comment.id));
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/application-notes/${comment.id}`,
+        { method: "DELETE" }
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      // rollback
+      setComments(previousComments);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
-        {/* Back button */}
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors mb-4"
-        >
-          <TbArrowLeft size={18} />
-          Back to applicants
-        </button>
-
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center gap-3">
-            <div className="p-2 bg-purple-50 rounded-lg">
-              <TbEdit className="text-purple-600" size={20} />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">
-                Notes & Comments
-              </h2>
-              <p className="text-sm text-gray-500">
-                View and add notes for this application
-              </p>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col relative animate-in fade-in zoom-in duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 shrink-0">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900">Comments</h3>
+            <p className="text-sm text-gray-500">{applicant?.full_name}</p>
           </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 hover:rotate-90 transition-all duration-200"
+            disabled={loading}
+          >
+            <TbX size={22} />
+          </button>
+        </div>
 
-          {/* Existing notes */}
-          <div className="p-6 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-              <TbMessage size={16} />
-              Previous Notes
-              <span className="text-xs text-gray-400 font-normal">
-                ({notes.length})
-              </span>
-            </h3>
+        {/* Comment List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[200px] max-h-[400px]">
+          {commentsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-purple-600 border-t-transparent"></div>
+            </div>
+          ) : commentsError ? (
+            <div className="text-center py-8">
+              <p className="text-red-500 text-sm">{commentsError}</p>
+              <button
+                onClick={() => applicationId && fetchComments(applicationId)}
+                className="mt-2 text-sm text-purple-600 hover:underline"
+              >
+                Retry
+              </button>
+            </div>
+          ) : filteredComments.length === 0 ? (
+            <div className="text-center py-8">
+              <TbMessage size={32} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-gray-400 text-sm">You have no comments yet</p>
+            </div>
+          ) : (
+            [...filteredComments]
+              .sort((a, b) => b.id - a.id)
+              .map((comment) => {
+                const isEditing = editingId === comment.id;
+                const isSaving = savingEditId === comment.id;
+                const isDeleting = deletingId === comment.id;
 
-            {fetching ? (
-              <div className="text-center py-4 text-sm text-gray-400">
-                Loading notes...
-              </div>
-            ) : notes.length === 0 ? (
-              <div className="text-center py-4 text-sm text-gray-400 italic">
-                No notes yet. Add the first one below.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {notes.map((note, index) => (
+                return (
                   <div
-                    key={note.id || index}
-                    className="bg-gray-50 rounded-lg p-4 border border-gray-100"
+                    key={comment.id}
+                    className={`group relative bg-gray-50 rounded-lg p-3 border border-gray-100 transition-all duration-200 hover:border-purple-200 hover:bg-purple-50/40 hover:shadow-sm ${
+                      isDeleting ? "opacity-40 scale-[0.98]" : "opacity-100 scale-100"
+                    }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="p-1.5 bg-purple-100 rounded-full mt-0.5">
-                        <TbUser size={14} className="text-purple-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">
-                            {note.note}
-                          </p>
-                          <span className="text-xs text-gray-400 flex items-center gap-1 shrink-0">
-                            <TbCalendar size={12} />
-                            {formatNoteDate(note.created_at || note.updated_at)}
-                          </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-semibold shrink-0">
+                          <TbUser size={14} />
                         </div>
-                        {note.created_by && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            By: User #{note.created_by}
-                          </p>
+                        <span className="text-sm font-medium text-gray-900">
+                          {getCommenterName(comment)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs text-gray-400 flex items-center gap-1">
+                          <TbClock size={12} />
+                          {formatCommentDate(comment.created_at)}
+                        </span>
+
+                        {/* ✅ Hover-reveal action icons */}
+                        {!isEditing && (
+                          <div
+                            className={`flex items-center gap-1 transition-all duration-200 ${
+                              isDeleting
+                                ? "opacity-0 pointer-events-none"
+                                : "opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0"
+                            }`}
+                          >
+                            <button
+                              onClick={() => startEdit(comment)}
+                              disabled={isDeleting}
+                              title="Edit comment"
+                              className="p-1 rounded-md text-gray-400 hover:text-purple-600 hover:bg-purple-100 hover:scale-110 active:scale-95 transition-all duration-150"
+                            >
+                              <TbPencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => deleteComment(comment)}
+                              disabled={isDeleting}
+                              title="Delete comment"
+                              className="p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-100 hover:scale-110 active:scale-95 transition-all duration-150"
+                            >
+                              {isDeleting ? (
+                                <TbLoader2 size={14} className="animate-spin" />
+                              ) : (
+                                <TbTrash size={14} />
+                              )}
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
+
+                    {/* Body: view mode vs edit mode */}
+                    {isEditing ? (
+                      <div className="mt-2 pl-8 animate-in fade-in slide-in-from-top-1 duration-150">
+                        <textarea
+                          autoFocus
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => handleEditKeyDown(e, comment)}
+                          rows={3}
+                          disabled={isSaving}
+                          className="w-full p-2.5 text-sm border border-purple-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 bg-white"
+                        />
+                        <div className="flex items-center justify-end gap-2 mt-2">
+                          <button
+                            onClick={cancelEdit}
+                            disabled={isSaving}
+                            className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => saveEdit(comment)}
+                            disabled={isSaving || !editValue.trim()}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isSaving ? (
+                              <>
+                                <TbLoader2 size={13} className="animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <TbCheck size={13} />
+                                Save
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-700 mt-1.5 pl-8 whitespace-pre-wrap break-words">
+                        {comment.note}
+                      </p>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              })
+          )}
+        </div>
+
+        {/* Comment Input */}
+        <div className="p-4 border-t border-gray-200 shrink-0">
+          <textarea
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            placeholder="Write your comment here..."
+            rows={3}
+            className="w-full p-3 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 text-sm transition-shadow"
+            disabled={loading}
+          />
+
+          <div className="flex justify-end gap-3 mt-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !commentText.trim()}
+              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Posting...
+                </>
+              ) : (
+                "Post Comment"
+              )}
+            </button>
           </div>
-
-          {/* Add new note form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Add a New Note
-              </label>
-              <textarea
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                rows="4"
-                placeholder="Write your comment here..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 resize-none"
-                disabled={submitting || fetching}
-              />
-              <p className="mt-1 text-xs text-gray-400">
-                {newNote.length} characters
-              </p>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                disabled={submitting}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!newNote.trim() || submitting || fetching}
-                className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {submitting ? (
-                  <>
-                    <svg
-                      className="animate-spin h-4 w-4 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <TbSend size={16} />
-                    Post Note
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Hidden debug info (optional) */}
-            <div className="text-xs text-gray-300 text-center border-t border-gray-100 pt-3 mt-2">
-              Application ID: {applicationId || "⚠️ missing"}
-            </div>
-          </form>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default CommentSection;
