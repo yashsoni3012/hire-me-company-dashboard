@@ -287,6 +287,7 @@ import JobListings from "./pages/JobListing/JobListings";
 import JobApplicants from "./pages/JobListing/JobApplicants"; // Add this import
 import ApplicantDetails from "./pages/JobListing/ApplicantDetails";
 import CommentSection from "./pages/JobListing/CommentSection";
+import JobEdit from "./pages/JobListing/JobEdit";
 
 // Wrapper to conditionally show MessageToggle
 function MessageToggleWrapper() {
@@ -352,6 +353,8 @@ export default function App() {
               <Route path="/jobs/:jobId/applicants/:candidateId" element={<ApplicantDetails />} />
 
               <Route path="/jobs/:jobId/applicants/:candidateId/comment/:applicationId" element={<CommentSection />} />
+
+               <Route path="/jobs/:id/edit" element={<JobEdit />} />
             </Route>
 
           </Routes>

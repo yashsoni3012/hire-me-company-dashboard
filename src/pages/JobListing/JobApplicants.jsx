@@ -48,6 +48,8 @@ import CommentSection from "../../pages/JobListing/CommentSection";
 const VIEWED_STATUS_ID = 3;
 const APPLICATION_STATUSES_URL =
   "https://hire-me-jobs.onrender.com/application-statuses";
+// Default fallback old status id when none is available (use 'applied' id as requested)
+const DEFAULT_OLD_STATUS_ID = 14;
 
 const applicantsApiService = {
   getApplicantsByJobId: async (jobId) => {
@@ -89,14 +91,61 @@ const applicantsApiService = {
     return response.json();
   },
 
-  // ✅ NEW: Bulk update endpoint
-  bulkUpdateApplicationStatus: async (data) => {
-    const response = await fetch(`${API_BASE_URL}/job-applications/bulk-status`, {
+  // Update job-application by its id (primary job-applications resource)
+  updateJobApplicationStatus: async (jobApplicationId, statusId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/job-applications/${jobApplicationId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ application_statuses_id: statusId }),
+      },
+    );
+    if (!response.ok) {
+      let msg = `HTTP error! status: ${response.status}`;
+      try {
+        const err = await response.json();
+        if (err.message) msg = err.message;
+      } catch (_) {}
+      throw new Error(msg);
+    }
+    return response.json();
+  },
+
+  postApplicationLog: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/application-logs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      let msg = `HTTP error! status: ${response.status}`;
+      try {
+        const err = await response.json();
+        if (err.message) msg = err.message;
+      } catch (_) {}
+      throw new Error(msg);
+    }
+    return response.json();
+  },
+
+  bulkUpdateApplicationStatus: async (payload) => {
+    const response = await fetch(
+      `${API_BASE_URL}/job-applications/update-status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
+    if (!response.ok) {
+      let errorMsg = `HTTP error! status: ${response.status}`;
+      try {
+        const errData = await response.json();
+        if (errData.message) errorMsg = errData.message;
+      } catch (_) {}
+      throw new Error(errorMsg);
+    }
     return response.json();
   },
 
@@ -164,7 +213,7 @@ const applicantsApiService = {
 };
 
 // ---------------------------------------------------------------------------
-// Helpers (unchanged)
+// Helpers
 // ---------------------------------------------------------------------------
 const asName = (val, fallback = "N/A") => {
   if (!val) return fallback;
@@ -255,7 +304,7 @@ const resolveJobRecord = (result, jobId) => {
 };
 
 // ---------------------------------------------------------------------------
-// Reusable bits (unchanged)
+// Reusable bits
 // ---------------------------------------------------------------------------
 const StatusBadge = ({ status }) => {
   const normalized = (status || "").toLowerCase();
@@ -316,7 +365,7 @@ const SkillChip = ({ label, highlighted }) => (
 );
 
 // ---------------------------------------------------------------------------
-// CandidateCard Component (with checkbox)
+// CandidateCard Component
 // ---------------------------------------------------------------------------
 const CandidateCard = ({
   applicant,
@@ -408,7 +457,10 @@ const CandidateCard = ({
         <div className="flex-1 min-w-0 flex gap-2">
           {/* Checkbox */}
           {showCheckbox && (
-            <div className="flex items-start pt-1" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="flex items-start pt-1"
+              onClick={(e) => e.stopPropagation()}
+            >
               <input
                 type="checkbox"
                 checked={isSelected}
@@ -703,7 +755,10 @@ const CandidateCard = ({
 
         {/* ─────────────── RIGHT COLUMN — Profile Summary ─────────────── */}
         <div className="w-full lg:w-80 shrink-0 lg:border-l lg:border-gray-100 lg:pl-5 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2" onClick={stopPropagation}>
+          <div
+            className="flex items-center justify-between gap-2"
+            onClick={stopPropagation}
+          >
             <p className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <TbNotes size={14} className="text-purple-500" />
               Profile Summary
@@ -785,13 +840,14 @@ export default function JobApplicants() {
   const [jobDetails, setJobDetails] = useState(null);
   const [jobLoading, setJobLoading] = useState(true);
 
-  // User map for comment authors
   const [userMap, setUserMap] = useState({});
   const [userMapLoading, setUserMapLoading] = useState(true);
 
-  // Multi‑select state
+  // Multi-select state
   const [selectedApplicants, setSelectedApplicants] = useState(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [showBulkMoveDropdown, setShowBulkMoveDropdown] = useState(false);
+  const bulkMoveDropdownRef = useRef(null);
 
   // ─── Fetch company users ──────────────────────────────────
   useEffect(() => {
@@ -861,7 +917,8 @@ export default function JobApplicants() {
       try {
         const result = await applicantsApiService.getApplicationStatuses();
         const list = result?.data || result || [];
-        setStatusOptions(Array.isArray(list) ? list : []);
+        const normalized = Array.isArray(list) ? list : [];
+        setStatusOptions(normalized);
       } catch (error) {
         console.error("Error fetching application statuses:", error);
       } finally {
@@ -871,7 +928,23 @@ export default function JobApplicants() {
     fetchStatuses();
   }, []);
 
-  // ✅ Fetch job details for the header
+  // ─── Close dropdown on outside click ──────────────────────────
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        bulkMoveDropdownRef.current &&
+        !bulkMoveDropdownRef.current.contains(e.target)
+      ) {
+        setShowBulkMoveDropdown(false);
+      }
+    };
+    if (showBulkMoveDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showBulkMoveDropdown]);
+
+  // ✅ Fetch job details for header
   useEffect(() => {
     const fetchJobDetails = async () => {
       if (!jobId) return;
@@ -890,12 +963,11 @@ export default function JobApplicants() {
     fetchJobDetails();
   }, [jobId]);
 
-  // ─── Main fetch ──────────────────────────────────────────────────
+  // ─── Main fetch applicants ──────────────────────────────────────
   const fetchApplicants = async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      // 1) Get candidate-profile-job-application (to get candidate details)
       const result = await applicantsApiService.getApplicantsByJobId(jobId);
       let rawList = [];
       if (Array.isArray(result)) rawList = result;
@@ -907,18 +979,21 @@ export default function JobApplicants() {
       else if (Array.isArray(result?.data?.candidates))
         rawList = result.data.candidates;
 
-      // 2) Get job-applications to map job_application_id and status_id
+      // Get job-applications to map job_application_id, status_id, job_id
       let jobAppsMap = {};
       try {
         const jobAppsResult =
           await applicantsApiService.getJobApplicationsByJobId(jobId);
         const jobApps = jobAppsResult?.data || jobAppsResult || [];
         jobAppsMap = jobApps.reduce((acc, app) => {
-          const candidateId = app.candidate_id || app.candidateId || app.Candidate?.id;
+          const candidateId =
+            app.candidate_id || app.candidateId || app.Candidate?.id;
           if (candidateId && app.id) {
             acc[candidateId] = {
               job_application_id: app.id,
-              status_id: app.ApplicationStatus?.id || null,
+              status_id: app.ApplicationStatus?.id ?? null,
+              status_name: (app.ApplicationStatus?.name || "").toLowerCase(),
+              job_id: app.job_id || app.Job?.id || Number(jobId),
             };
           }
           return acc;
@@ -927,7 +1002,6 @@ export default function JobApplicants() {
         console.warn("Could not fetch job applications, falling back.", err);
       }
 
-      // Transform
       const transformed = rawList.map((item) => {
         const { person: c, bundle } = resolveCandidateBundle(item);
         const profile = bundle.candidate_profiles || {};
@@ -941,11 +1015,14 @@ export default function JobApplicants() {
           (c !== item ? c.id : undefined);
 
         const jobAppInfo = jobAppsMap[candidateId] || {};
-        const jobAppId = jobAppInfo.job_application_id || item.job_application_id || null;
+        const jobAppId =
+          jobAppInfo.job_application_id || item.job_application_id || null;
         const statusId = jobAppInfo.status_id || null;
 
         const rawSkills = asList(
-          bundle.candidate_skills || c.candidate_skills || item.candidate_skills,
+          bundle.candidate_skills ||
+            c.candidate_skills ||
+            item.candidate_skills,
         );
         const skillNames = rawSkills
           .map((s) => {
@@ -1035,6 +1112,7 @@ export default function JobApplicants() {
           application_id: item.id || item.application_id,
           job_application_id: jobAppId,
           status_id: statusId,
+          job_id: jobAppsMap[candidateId]?.job_id || Number(jobId),
           candidate_id: candidateId,
           first_name: c.first_name || "",
           last_name: c.last_name || "",
@@ -1046,7 +1124,11 @@ export default function JobApplicants() {
           mobile_verified: !!(c.mobile_verified || c.is_mobile_verified),
           email_verified: !!c.email_verified,
           profile_photo: c.profile_photo || profile.profile_photo || null,
-          status: item.status || c.status || "pending",
+          status:
+            jobAppsMap[candidateId]?.status_name ||
+            item.status ||
+            c.status ||
+            "pending",
           applied_at: item.applied_at || item.created_at || item.createdAt,
           updated_at: item.updated_at || item.updatedAt,
           is_newly_added: isRecentlyApplied(
@@ -1291,69 +1373,246 @@ export default function JobApplicants() {
     }
   };
 
-  // ─── Bulk Move handler ──────────────────────────────────────────
-  const handleBulkMove = async (statusId) => {
+  // ─── Bulk Move handler ─────────────────────────────────────────────────
+  // Uses the bulk endpoint with the exact payload format you requested:
+  // {
+  //   "job_applications_ids": [1, 5],
+  //   "job_id": 9,
+  //   "old_status_id": 1,
+  //   "new_status_id": 5,
+  //   "created_by": 1
+  // }
+  // If the bulk call fails, it automatically falls back to individual PATCH
+  // so that ALL statuses (including user‑created) work.
+  // ──────────────────────────────────────────────────────────────────────
+  const handleBulkMove = async (selectedFolder) => {
+    if (bulkActionLoading) return;
     if (selectedApplicants.size === 0) {
-      showError("No applicants selected");
+      showError("No applicants selected.");
       return;
     }
-    if (!statusId) {
-      showError("Please select a folder/status");
-      return;
-    }
-
-    const statusObj = statusOptions.find((s) => s.id === Number(statusId));
-    if (!statusObj) {
-      showError("Invalid status selected");
+    if (!selectedFolder?.id) {
+      showError("Please select a destination folder.");
       return;
     }
 
-    // Collect job_application_ids and old status_id
-    const selectedIds = Array.from(selectedApplicants);
-    const jobAppIds = [];
-    let oldStatusId = null;
+    setShowBulkMoveDropdown(false);
 
-    for (const id of selectedIds) {
-      const applicant = applicants.find((a) => (a.application_id || a.candidate_id) === id);
-      if (applicant && applicant.job_application_id) {
-        jobAppIds.push(applicant.job_application_id);
-        if (oldStatusId === null && applicant.status_id) {
-          oldStatusId = applicant.status_id;
+    // Gather all selected applicant objects (we'll resolve job_application_id when missing)
+    const selectedApplicantObjects = Array.from(selectedApplicants)
+      .map((id) =>
+        applicants.find(
+          (a) => a.application_id === id || a.candidate_id === id,
+        ),
+      )
+      .filter(Boolean);
+
+    if (selectedApplicantObjects.length === 0) {
+      showError(
+        "None of the selected applicants have a valid job application ID.",
+      );
+      return;
+    }
+
+    // created_by: logged-in user ID (never hardcoded)
+    const createdBy =
+      companyUserId ??
+      user?.id ??
+      (() => {
+        try {
+          const raw = localStorage.getItem("user");
+          return raw ? (JSON.parse(raw)?.id ?? null) : null;
+        } catch {
+          return null;
+        }
+      })();
+
+    if (!createdBy) {
+      showError("You must be logged in to move applicants.");
+      return;
+    }
+
+    // job_id: from the first applicant's job_id or fallback to URL param
+    const resolvedJobId =
+      selectedApplicantObjects.find((a) => a.job_id)?.job_id ?? Number(jobId);
+
+    // Fetch all job-applications for this job to prefer canonical status ids
+    let jobAppsById = {};
+    try {
+      const allJobAppsRes =
+        await applicantsApiService.getJobApplicationsByJobId(resolvedJobId);
+      const jobAppsList = allJobAppsRes?.data || allJobAppsRes || [];
+      jobAppsById = jobAppsList.reduce((acc, rec) => {
+        if (rec && rec.id) {
+          acc[rec.id] = {
+            status_id:
+              rec.ApplicationStatus?.id ?? rec.application_statuses_id ?? null,
+            candidate_id: rec.candidate_id ?? rec.Candidate?.id ?? null,
+          };
+        }
+        return acc;
+      }, {});
+    } catch (e) {
+      console.warn(
+        "Could not fetch job-applications list for job to resolve statuses:",
+        e,
+      );
+    }
+
+    // Ensure each selected applicant has a valid job_application_id and status_id
+    for (const applicant of selectedApplicantObjects) {
+      // Ensure job_application_id exists
+      if (!applicant.job_application_id) {
+        try {
+          const foundId = await getValidJobApplicationId(
+            applicant.candidate_id,
+          );
+          if (foundId) applicant.job_application_id = foundId;
+        } catch (e) {
+          console.warn(
+            "Could not resolve job_application_id for",
+            applicant.candidate_id,
+            e,
+          );
+        }
+      }
+
+      // Prefer status from the fetched job-applications map when available
+      if (
+        applicant.job_application_id &&
+        jobAppsById[applicant.job_application_id]
+      ) {
+        applicant.status_id =
+          jobAppsById[applicant.job_application_id].status_id ??
+          applicant.status_id ??
+          null;
+      } else if (applicant.status_id == null && applicant.candidate_id) {
+        // As a last resort, try fetching job application by candidate
+        try {
+          const res = await applicantsApiService.getJobApplicationByCandidate(
+            resolvedJobId,
+            applicant.candidate_id,
+          );
+          const apps = res?.data || res || [];
+          if (apps.length > 0) {
+            const appRec = apps[0];
+            applicant.job_application_id =
+              applicant.job_application_id || appRec.id;
+            applicant.status_id =
+              appRec.ApplicationStatus?.id ??
+              appRec.application_statuses_id ??
+              null;
+          }
+        } catch (e) {
+          console.warn(
+            "Could not fetch job application for status for",
+            applicant.candidate_id,
+            e,
+          );
         }
       }
     }
 
-    if (jobAppIds.length === 0) {
-      showError("No valid job applications found for selected applicants");
-      return;
-    }
-
-    const payload = {
-      job_applications_ids: jobAppIds,
-      job_id: Number(jobId),
-      old_status_id: oldStatusId || 1,
-      new_status_id: Number(statusId),
-      created_by: companyUserId || user?.id || 1,
-    };
+    // We'll update each selected application individually and create application-logs
+    let totalMoved = 0;
+    let totalFailed = 0;
 
     setBulkActionLoading(true);
     try {
-      await applicantsApiService.bulkUpdateApplicationStatus(payload);
-      showSuccess(`✅ ${jobAppIds.length} applicant(s) moved to "${statusObj.name}"`);
-
-      // Update local state
-      setApplicants((prev) =>
-        prev.map((a) => {
-          if (selectedApplicants.has(a.application_id || a.candidate_id)) {
-            return { ...a, status: statusObj.name, status_id: statusObj.id };
+      for (const applicant of selectedApplicantObjects) {
+        try {
+          // Resolve job_application_id if missing
+          if (!applicant.job_application_id) {
+            const foundId = await getValidJobApplicationId(
+              applicant.candidate_id,
+            );
+            if (foundId) applicant.job_application_id = foundId;
           }
-          return a;
-        })
-      );
+
+          const jobAppId = applicant.job_application_id;
+          if (!jobAppId) {
+            console.warn(
+              "Skipping applicant without job_application_id:",
+              applicant,
+            );
+            totalFailed++;
+            continue;
+          }
+
+          const oldStatusId =
+            jobAppsById[jobAppId]?.status_id ??
+            applicant.status_id ??
+            DEFAULT_OLD_STATUS_ID;
+
+          // Update the job-application status
+          await applicantsApiService.updateJobApplicationStatus(
+            jobAppId,
+            selectedFolder.id,
+          );
+
+          // Post application log to record status change
+          try {
+            const logPayload = {
+              job_id: resolvedJobId,
+              job_applications_id: jobAppId,
+              old_status_id: oldStatusId,
+              new_status_id: selectedFolder.id,
+              created_by: createdBy,
+              remarks: null,
+            };
+            await applicantsApiService.postApplicationLog(logPayload);
+          } catch (logErr) {
+            console.warn(
+              "Failed to post application log for",
+              jobAppId,
+              logErr,
+            );
+          }
+
+          totalMoved++;
+        } catch (err) {
+          console.error(
+            "[BulkMove] Failed to update applicant:",
+            applicant,
+            err,
+          );
+          totalFailed++;
+        }
+      }
+
+      // Update local state for all moved applicants
+      if (totalMoved > 0) {
+        setApplicants((prev) =>
+          prev.map((a) => {
+            if (selectedApplicants.has(a.application_id || a.candidate_id)) {
+              return {
+                ...a,
+                status: selectedFolder.name,
+                status_id: selectedFolder.id,
+              };
+            }
+            return a;
+          }),
+        );
+
+        const folderLabel =
+          selectedFolder.name.charAt(0).toUpperCase() +
+          selectedFolder.name.slice(1);
+        const msg =
+          totalFailed === 0
+            ? `${totalMoved} applicant(s) moved to "${folderLabel}" successfully.`
+            : `⚠️ ${totalMoved} moved, ${totalFailed} failed.`;
+        showSuccess(msg);
+      } else {
+        showError("Failed to move any applicants.");
+      }
+
+      // Clear selection and refresh data
       setSelectedApplicants(new Set());
-    } catch (error) {
-      console.error("Bulk move error:", error);
-      showError("Failed to move applicants");
+      await fetchApplicants();
+    } catch (unexpected) {
+      console.error("[BulkMove] Unexpected error:", unexpected);
+      showError("An unexpected error occurred. Please try again.");
     } finally {
       setBulkActionLoading(false);
     }
@@ -1377,7 +1636,10 @@ export default function JobApplicants() {
       .map((a) => a.application_id || a.candidate_id)
       .filter((id) => id);
 
-    if (selectedApplicants.size === visibleIds.length && visibleIds.length > 0) {
+    if (
+      selectedApplicants.size === visibleIds.length &&
+      visibleIds.length > 0
+    ) {
       setSelectedApplicants(new Set());
     } else {
       setSelectedApplicants(new Set(visibleIds));
@@ -1392,7 +1654,10 @@ export default function JobApplicants() {
     const visibleIds = currentApplicants
       .map((a) => a.application_id || a.candidate_id)
       .filter((id) => id);
-    return visibleIds.length > 0 && visibleIds.every((id) => selectedApplicants.has(id));
+    return (
+      visibleIds.length > 0 &&
+      visibleIds.every((id) => selectedApplicants.has(id))
+    );
   };
 
   // ─── Status counts for folders ──────────────────────────────────
@@ -1558,7 +1823,8 @@ export default function JobApplicants() {
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
-              {status.name.charAt(0).toUpperCase() + status.name.slice(1)} ({statusCounts[status.name] || 0})
+              {status.name.charAt(0).toUpperCase() + status.name.slice(1)} (
+              {statusCounts[status.name] || 0})
             </button>
           ))}
         </div>
@@ -1606,45 +1872,134 @@ export default function JobApplicants() {
 
         {/* ─── Bulk Action Bar ────────────────────────────────────── */}
         {selectedApplicants.size > 0 && (
-          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 px-6 py-4 flex items-center gap-6 animate-in slide-in-from-bottom-4 duration-300">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-gray-700">
-                {selectedApplicants.size} applicant{selectedApplicants.size > 1 ? "s" : ""} selected
+          <div
+            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50
+              bg-white rounded-2xl shadow-2xl border border-gray-200
+              px-6 py-4 flex items-center gap-4
+              animate-in slide-in-from-bottom-4 duration-300"
+            style={{ minWidth: 320 }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-xs font-bold">
+                {selectedApplicants.size}
+              </span>
+              <span className="text-sm font-semibold text-gray-700 whitespace-nowrap">
+                Applicant{selectedApplicants.size > 1 ? "s" : ""} Selected
               </span>
             </div>
 
-            <div className="h-8 w-px bg-gray-200"></div>
+            <div className="h-8 w-px bg-gray-200 shrink-0" />
 
-            {/* Bulk Move Dropdown */}
-            <div className="relative">
-              <select
-                value=""
-                onChange={(e) => {
-                  const statusId = e.target.value;
-                  if (statusId) {
-                    handleBulkMove(statusId);
-                  }
-                }}
+            <div className="relative" ref={bulkMoveDropdownRef}>
+              <button
+                onClick={() =>
+                  !bulkActionLoading && setShowBulkMoveDropdown((v) => !v)
+                }
                 disabled={bulkActionLoading}
-                className="px-4 py-2 pr-8 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors cursor-pointer appearance-none disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold
+                  text-white bg-purple-600 rounded-lg hover:bg-purple-700
+                  active:bg-purple-800 transition-colors
+                  disabled:opacity-60 disabled:cursor-not-allowed
+                  focus:outline-none focus:ring-2 focus:ring-purple-500/40"
               >
-                <option value="">Move to folder...</option>
-                {statusOptions.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-              <TbChevronDown
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white pointer-events-none"
-                size={14}
-              />
+                {bulkActionLoading ? (
+                  <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <TbFolderSymlink size={15} />
+                )}
+                {bulkActionLoading ? "Moving..." : "Move to Folder"}
+                <TbChevronDown
+                  size={13}
+                  className={`transition-transform duration-200 ${
+                    showBulkMoveDropdown ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {showBulkMoveDropdown && (
+                <div
+                  role="listbox"
+                  className="absolute bottom-full mb-2 left-0 w-56
+                    bg-white border border-gray-200 rounded-xl shadow-2xl
+                    z-[1100] py-1.5 overflow-y-auto"
+                  style={{ maxHeight: 260 }}
+                >
+                  <div className="px-3 py-1.5 border-b border-gray-100 mb-1">
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                      Move to folder
+                    </p>
+                  </div>
+
+                  {statusOptionsLoading ? (
+                    <div className="px-3 py-4 flex items-center justify-center">
+                      <span className="inline-block w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : statusOptions.length === 0 ? (
+                    <div className="px-3 py-3 text-xs text-gray-400 text-center">
+                      No folders available
+                    </div>
+                  ) : (
+                    statusOptions.map((opt) => {
+                      const allInThisStatus = Array.from(selectedApplicants)
+                        .map((id) =>
+                          applicants.find(
+                            (a) => (a.application_id || a.candidate_id) === id,
+                          ),
+                        )
+                        .filter(Boolean)
+                        .every(
+                          (a) =>
+                            (a.status || "").toLowerCase() ===
+                            (opt.name || "").toLowerCase(),
+                        );
+
+                      return (
+                        <button
+                          key={opt.id}
+                          role="option"
+                          aria-selected={allInThisStatus}
+                          onClick={() => handleBulkMove(opt)}
+                          className={`w-full text-left px-3 py-2.5 text-sm capitalize
+                            flex items-center justify-between gap-2
+                            hover:bg-purple-50 hover:text-purple-700
+                            transition-colors rounded-md mx-0
+                            ${
+                              allInThisStatus
+                                ? "text-purple-600 font-semibold bg-purple-50/60"
+                                : "text-gray-700"
+                            }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <TbFolder
+                              size={14}
+                              className="shrink-0 text-current opacity-70"
+                            />
+                            {opt.name.charAt(0).toUpperCase() +
+                              opt.name.slice(1)}
+                          </span>
+                          {allInThisStatus && (
+                            <TbCheck
+                              size={14}
+                              className="shrink-0 text-purple-600"
+                            />
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
 
             <button
-              onClick={clearSelection}
-              className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={() => {
+                clearSelection();
+                setShowBulkMoveDropdown(false);
+              }}
               disabled={bulkActionLoading}
+              className="text-sm text-gray-400 hover:text-gray-600
+                transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+                whitespace-nowrap"
             >
               Cancel
             </button>
@@ -1659,7 +2014,9 @@ export default function JobApplicants() {
           </div>
         ) : loadError ? (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-            <p className="text-red-500 font-medium">Failed to load applicants</p>
+            <p className="text-red-500 font-medium">
+              Failed to load applicants
+            </p>
             <p className="text-sm text-gray-400 mt-1">{loadError}</p>
             <button
               onClick={fetchApplicants}
@@ -1691,11 +2048,11 @@ export default function JobApplicants() {
                   statusOptionsLoading={statusOptionsLoading}
                   onMoveTo={handleMoveToStatus}
                   isSelected={selectedApplicants.has(
-                    applicant.application_id || applicant.candidate_id
+                    applicant.application_id || applicant.candidate_id,
                   )}
                   onSelectToggle={() =>
                     toggleSelectApplicant(
-                      applicant.application_id || applicant.candidate_id
+                      applicant.application_id || applicant.candidate_id,
                     )
                   }
                   showCheckbox={true}
