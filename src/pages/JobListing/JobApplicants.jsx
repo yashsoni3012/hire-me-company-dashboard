@@ -2072,7 +2072,7 @@ export default function JobApplicants() {
                     {Math.min(endIndex, totalItems)}
                   </span>{" "}
                   of{" "}
-                  <span className="font-medium text-gray-700">
+                  <span className="font-medium text-gray-700">  
                     {totalItems}
                   </span>{" "}
                   applicants
